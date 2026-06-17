@@ -204,6 +204,6 @@ Open an issue with ideas, bug reports, or UIA edge cases you've found.
 ---
 
 <p align="center">
-  <sub>Built with ☕ on Windows. Apache 2.0 © 2025
+  <sub>Built with ☕ on Windows. Apache 2.0 © 2026
   <a href="https://github.com/surun7">surun7</a></sub>
 </p>

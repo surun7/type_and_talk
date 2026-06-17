@@ -1,0 +1,21 @@
+{
+  "_comment": "Pricing table for known LLM models. Source: DeepSeek API docs (https://api-docs.deepseek.com/quick_start/pricing) as of 2025.",
+
+  "deepseek-chat": {
+    "input_per_1m": 0.14,
+    "output_per_1m": 0.28,
+    "currency": "USD"
+  },
+
+  "deepseek-flash": {
+    "input_per_1m": 0.014,
+    "output_per_1m": 0.028,
+    "currency": "USD"
+  },
+
+  "deepseek-reasoner": {
+    "input_per_1m": 0.55,
+    "output_per_1m": 2.19,
+    "currency": "USD"
+  }
+}

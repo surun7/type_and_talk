@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-uia"
+version = "0.1.0"
+description = "Windows-only UIA-driven desktop AI agent"
+license = {text = "Apache-2.0"}
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    {name = "agent-uia contributors"},
+]
+keywords = ["uia", "ui-automation", "desktop-agent", "windows"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Desktop Environment",
+]
+
+dependencies = [
+    "uiautomation>=2.0.15",
+    "loguru>=0.7",
+    "pydantic>=2.5",
+    "python-dotenv>=1.0",
+    "openai>=1.30",
+    "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-asyncio>=0.23",
+    "mypy>=1.7",
+    "ruff>=0.1",
+]
+
+[project.scripts]
+agent-uia = "agent_uia.main:cli_main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+warn_unused_ignores = true

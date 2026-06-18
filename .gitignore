@@ -18,8 +18,16 @@ build/
 logs/
 *.log
 
-# Environment
+# Environment & secrets
 .env
+.env.*
+*.pem
+*.key
+credentials.json
+credentials.*
+secrets.*
+secret.*
+config.local.*
 
 # IDE
 .vscode/

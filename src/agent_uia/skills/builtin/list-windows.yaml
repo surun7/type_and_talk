@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 agent-uia contributors
+id: list-windows
+name: 列出当前打开的窗口
+description: 通过 UIA 枚举所有顶层窗口，列出标题、进程名、控件类型。
+version: "0.1.0"
+author: tnt-team
+license: MIT
+tags: [diagnostics]
+inputs: []
+permissions: [read_screen_state]
+on_error: STOP
+on_block: STOP
+steps:
+  - kind: tool
+    id: scan
+    name: 枚举窗口
+    tool: read_screen_state
+    args: {}
+  - kind: complete
+    id: done
+    name: 完成
+    message: 扫描完成。请在历史记录中查看完整窗口列表。
+    depends_on: [scan]

@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 from unittest import mock
 
@@ -21,9 +20,7 @@ from agent_uia.safety import (
     UnsupportedAppError,
     assert_action_allowed,
     assert_app_allowed,
-    default_gate,
 )
-
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 

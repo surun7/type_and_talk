@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 agent-uia contributors
+id: minimize-all
+name: 最小化所有窗口
+description: 按 Win+D 显示桌面（最小化所有窗口）。
+version: "0.1.0"
+author: tnt-team
+license: MIT
+tags: [system]
+inputs: []
+permissions: [press_key]
+on_error: STOP
+on_block: STOP
+steps:
+  - kind: tool
+    id: press_win_d
+    name: 按 Win+D
+    tool: press_key
+    args:
+      key: win+d
+  - kind: complete
+    id: done
+    name: 完成
+    message: 已显示桌面。
+    depends_on: [press_win_d]

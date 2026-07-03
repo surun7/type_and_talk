@@ -11,21 +11,19 @@ from unittest import mock
 import pytest
 
 from agent_uia.llm_client import (
+    AssistantMessage,
     LLMClient,
     LLMConfig,
     LLMResponse,
-    LLMUsage,
     LLMUnavailableError,
+    LLMUsage,
     SystemMessage,
-    UserMessage,
-    AssistantMessage,
-    ToolMessage,
     ToolCall,
+    ToolMessage,
     UsageLedger,
+    UserMessage,
     _message_to_openai,
-    _openai_response_to_llm,
 )
-
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 

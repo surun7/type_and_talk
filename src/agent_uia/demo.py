@@ -27,8 +27,8 @@ from agent_uia.platform_check import assert_windows
 
 def _run_no_llm() -> int:
     """Original UIA-only Notepad smoke test. Returns exit code."""
-    from agent_uia.safety import SafetyGate, SafetyConfig
     from agent_uia.executor import UIAExecutor
+    from agent_uia.safety import SafetyConfig, SafetyGate
 
     assert_windows()
 
@@ -112,7 +112,7 @@ def _run_no_llm() -> int:
     print()
     print("=" * 60)
     print("  DEMO COMPLETE")
-    print(f"  Status:   ✓ SUCCESS")
+    print("  Status:   ✓ SUCCESS")
     print(f"  Time:     {elapsed:.2f}s")
     print(f"  Safety:   {safety_checks_passed} checks passed")
     print("=" * 60)
@@ -126,10 +126,10 @@ async def _run_llm(instruction: str) -> int:
 
     from dotenv import load_dotenv
 
+    from agent_uia.executor import UIAExecutor
     from agent_uia.llm_client import LLMConfig, UsageLedger
     from agent_uia.planner import Planner, PlannerConfig
-    from agent_uia.safety import SafetyGate, SafetyConfig
-    from agent_uia.executor import UIAExecutor
+    from agent_uia.safety import SafetyConfig, SafetyGate
 
     assert_windows()
 
@@ -184,11 +184,11 @@ async def _run_llm(instruction: str) -> int:
     async def on_event(event) -> None:
         """Print progress events."""
         from agent_uia.planner import (
-            StepStarted,
-            LLMCalled,
-            ToolCallStarted,
-            ToolCallFinished,
             FinalAnswerReady,
+            LLMCalled,
+            StepStarted,
+            ToolCallFinished,
+            ToolCallStarted,
         )
 
         if isinstance(event, StepStarted):
@@ -222,7 +222,7 @@ async def _run_llm(instruction: str) -> int:
     print(f"  Steps taken:  {result.steps_taken}")
     print(f"  Total cost:   ${result.total_cost_usd:.6f}")
     print(f"  Total tokens: {result.usage.total_tokens}")
-    print(f"  Final message:")
+    print("  Final message:")
     print(f"    {result.user_facing_message[:500]}")
     print("=" * 60)
 

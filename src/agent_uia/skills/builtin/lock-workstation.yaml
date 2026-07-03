@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 agent-uia contributors
+id: lock-workstation
+name: 锁屏
+description: 锁定 Windows 工作站。需要用户确认。
+version: "0.1.0"
+author: tnt-team
+license: MIT
+tags: [system]
+inputs: []
+permissions: [press_key]
+on_error: STOP
+on_block: STOP
+steps:
+  - kind: tool
+    id: press_win_l
+    name: 按 Win+L
+    tool: press_key
+    args:
+      key: win+l
+  - kind: complete
+    id: done
+    name: 完成
+    message: 已锁定工作站。
+    depends_on: [press_win_l]

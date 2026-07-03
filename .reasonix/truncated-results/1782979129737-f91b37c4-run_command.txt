@@ -1,0 +1,377 @@
+$ python -m pytest tests/test_tools.py tests/test_confirmation_dialog.py tests/test_dispatcher_confirmation_guard.py tests/test_hotkey.py tests/test_floating_window.py tests/test_app_controller.py -v --tb=short 2>&1
+[exit 1]
+============================= test session starts =============================
+platform win32 -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\python.exe
+cachedir: .pytest_cache
+rootdir: C:\kodo\type_and_talk
+configfile: pyproject.toml
+plugins: anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 87 items
+
+tests/test_tools.py::TestToolSpecs::test_all_tools_in_all_specs PASSED   [  1%]
+tests/test_tools.py::TestToolSpecs::test_each_spec_is_valid_openai_function PASSED [  2%]
+tests/test_tools.py::TestToolSpecs::test_each_spec_name_is_unique PASSED [  3%]
+tests/test_tools.py::TestToolSpecs::test_each_spec_matches_class_tool_name PASSED [  4%]
+tests/test_tools.py::TestToolSpecs::test_required_field_in_schema PASSED [  5%]
+tests/test_tools.py::TestToolSpecs::test_system_prompt_has_all_hard_rules PASSED [  6%]
+tests/test_tools.py::TestLaunchAppValidation::test_allows_simple_exe PASSED [  8%]
+tests/test_tools.py::TestLaunchAppValidation::test_allows_quoted_arg FAILED [  9%]
+tests/test_tools.py::TestLaunchAppValidation::test_rejects_semicolon PASSED [ 10%]
+tests/test_tools.py::TestLaunchAppValidation::test_rejects_pipe PASSED   [ 11%]
+tests/test_tools.py::TestLaunchAppValidation::test_rejects_ampersand PASSED [ 12%]
+tests/test_tools.py::TestLaunchAppValidation::test_rejects_backtick PASSED [ 13%]
+tests/test_tools.py::TestLaunchAppValidation::test_rejects_redirect PASSED [ 14%]
+tests/test_tools.py::TestTypeTextInput::test_allowed_chars_preserved PASSED [ 16%]
+tests/test_tools.py::TestTypeTextInput::test_null_stripped FAILED        [ 17%]
+tests/test_tools.py::TestTypeTextInput::test_escape_stripped FAILED      [ 18%]
+tests/test_tools.py::TestPressKeyInput::test_allowed_key_passes PASSED   [ 19%]
+tests/test_tools.py::TestPressKeyInput::test_allowed_combo_passes PASSED [ 20%]
+tests/test_tools.py::TestPressKeyInput::test_disallowed_key_stripped PASSED [ 21%]
+tests/test_tools.py::TestActionResult::test_ok_action PASSED             [ 22%]
+tests/test_tools.py::TestActionResult::test_fail_action PASSED           [ 24%]
+tests/test_tools.py::TestToolDispatcher::test_known_tools_has_all_14 PASSED [ 25%]
+tests/test_tools.py::TestToolDispatcher::test_validate_tool_name PASSED  [ 26%]
+tests/test_tools.py::TestToolDispatcher::test_dispatch_unknown_tool PASSED [ 27%]
+tests/test_tools.py::TestToolDispatcher::test_dispatch_launch_app_valorant_blocked PASSED [ 28%]
+tests/test_tools.py::TestToolDispatcher::test_dispatch_launch_app_notepad_allowed PASSED [ 29%]
+tests/test_tools.py::TestToolDispatcher::test_dispatch_request_user_confirmation_no_app_controller FAILED [ 31%]
+tests/test_tools.py::TestToolDispatcher::test_dispatch_read_screen_state PASSED [ 32%]
+tests/test_tools.py::TestToolDispatcher::test_launch_app_rejects_shell_injection PASSED [ 33%]
+tests/test_tools.py::TestWindowRef::test_from_window_info PASSED         [ 34%]
+tests/test_tools.py::TestControlRef::test_from_control_ref FAILED        [ 35%]
+tests/test_tools.py::TestScreenStateSummary::test_to_dict FAILED         [ 36%]
+tests/test_confirmation_dialog.py::test_yes_returns_yes PASSED           [ 37%]
+tests/test_confirmation_dialog.py::test_auto_confirm_yes PASSED          [ 39%]
+tests/test_confirmation_dialog.py::test_auto_confirm_no PASSED           [ 40%]
+tests/test_confirmation_dialog.py::test_timeout_returns_timeout PASSED   [ 41%]
+tests/test_confirmation_dialog.py::test_dialog_has_three_buttons PASSED  [ 42%]
+tests/test_confirmation_dialog.py::test_dialog_shows_action_type_and_target PASSED [ 43%]
+tests/test_confirmation_dialog.py::test_audit_log_recorded PASSED        [ 44%]
+tests/test_dispatcher_confirmation_guard.py::test_sensitive_action_blocked_without_confirmation PASSED [ 45%]
+tests/test_dispatcher_confirmation_guard.py::test_sensitive_action_allowed_with_confirmation PASSED [ 47%]
+tests/test_dispatcher_confirmation_guard.py::test_sensitive_action_allowed_with_confirmation_for_same_target PASSED [ 48%]
+tests/test_dispatcher_confirmation_guard.py::test_non_sensitive_action_no_confirmation_needed PASSED [ 49%]
+tests/test_dispatcher_confirmation_guard.py::test_target_mismatch_blocks PASSED [ 50%]
+tests/test_hotkey.py::test_parse_known_combinations[ctrl+shift+space-6-32] PASSED [ 51%]
+tests/test_hotkey.py::test_parse_known_combinations[alt+f4-1-115] PASSED [ 52%]
+tests/test_hotkey.py::test_parse_known_combinations[ctrl+alt+f12-3-123] PASSED [ 54%]
+tests/test_hotkey.py::test_parse_known_combinations[win+e-8-69] PASSED   [ 55%]
+tests/test_hotkey.py::test_parse_known_combinations[ctrl+c-2-67] PASSED  [ 56%]
+tests/test_hotkey.py::test_parse_known_combinations[ctrl+v-2-86] PASSED  [ 57%]
+tests/test_hotkey.py::test_parse_known_combinations[alt+tab-1-9] PASSED  [ 58%]
+tests/test_hotkey.py::test_parse_known_combinations[ctrl+shift+a-6-65] PASSED [ 59%]
+tests/test_hotkey.py::test_parse_known_combinations[shift+return-4-13] PASSED [ 60%]
+tests/test_hotkey.py::test_parse_known_combinations[alt+space-1-32] PASSED [ 62%]
+tests/test_hotkey.py::test_parse_known_combinations[ctrl+0-2-48] PASSED  [ 63%]
+tests/test_hotkey.py::test_parse_known_combinations[ctrl+9-2-57] PASSED  [ 64%]
+tests/test_hotkey.py::test_parse_known_combinations[shift+f1-4-112] PASSED [ 65%]
+tests/test_hotkey.py::test_parse_known_combinations[ctrl+backspace-2-8] PASSED [ 66%]
+tests/test_hotkey.py::test_rejects_reserved_combos[ctrl+alt+delete] PASSED [ 67%]
+tests/test_hotkey.py::test_rejects_reserved_combos[ctrl+escape] PASSED   [ 68%]
+tests/test_hotkey.py::test_rejects_reserved_combos[win+l] PASSED         [ 70%]
+tests/test_hotkey.py::test_rejects_reserved_combos[windows+l] PASSED     [ 71%]
+tests/test_hotkey.py::test_rejects_reserved_combos[ctrl+win+l] PASSED    [ 72%]
+tests/test_hotkey.py::test_rejects_invalid_strings[] PASSED              [ 73%]
+tests/test_hotkey.py::test_rejects_invalid_strings[space] PASSED         [ 74%]
+tests/test_hotkey.py::test_rejects_invalid_strings[ctrl+] PASSED         [ 75%]
+tests/test_hotkey.py::test_rejects_invalid_strings[+space] PASSED        [ 77%]
+tests/test_hotkey.py::test_rejects_invalid_strings[ctrl++space] PASSED   [ 78%]
+tests/test_hotkey.py::test_rejects_invalid_strings[unknownkey] PASSED    [ 79%]
+tests/test_hotkey.py::test_rejects_invalid_strings[ctrl+superkey] PASSED [ 80%]
+tests/test_hotkey.py::test_rejects_invalid_strings[supmod+space] PASSED  [ 81%]
+tests/test_hotkey.py::TestGlobalHotkeyLifecycle::test_start_calls_register PASSED [ 82%]
+tests/test_hotkey.py::TestGlobalHotkeyLifecycle::test_start_raises_on_conflict PASSED [ 83%]
+tests/test_hotkey.py::TestGlobalHotkeyLifecycle::test_stop_calls_unregister PASSED [ 85%]
+tests/test_hotkey.py::TestGlobalHotkeyLifecycle::test_start_twice_is_noop PASSED [ 86%]
+tests/test_hotkey.py::TestGlobalHotkeyLifecycle::test_stop_before_start_is_safe PASSED [ 87%]
+tests/test_hotkey.py::TestGlobalHotkeyLifecycle::test_is_registered_flag PASSED [ 88%]
+tests/test_hotkey.py::TestGlobalHotkeyLifecycle::test_start_after_stop_re_registers PASSED [ 89%]
+tests/test_floating_window.py::test_window_flags PASSED                  [ 90%]
+tests/test_floating_window.py::test_input_field_placeholder PASSED       [ 91%]
+tests/test_floating_window.py::test_close_event_ignored_and_hides PASSED [ 93%]
+tests/test_floating_window.py::test_streaming_final_answer PASSED        [ 94%]
+tests/test_app_controller.py::test_run_task_calls_planner PASSED         [ 95%]
+tests/test_app_controller.py::test_signals_fire_in_order PASSED          [ 96%]
+tests/test_app_controller.py::test_paused_short_circuits PASSED          [ 97%]
+tests/test_app_controller.py::test_history_appended_on_completion PASSED [ 98%]
+tests/test_app_controller.py::test_missing_api_key_does_not_crash_start PASSED [100%]
+
+================================== FAILURES ===================================
+_______________ TestLaunchAppValidation.test_allows_quoted_arg ________________
+tests\test_tools.py:119: in test_allows_quoted_arg
+    _validate_launch_args(["C:\\Program Files\\app.exe", "--help"])
+src\agent_uia\tools\base.py:155: in _validate_launch_args
+    raise ValueError(
+E   ValueError: Argument contains forbidden shell characters: 'C:\\Program Files\\app.exe'
+____________________ TestTypeTextInput.test_null_stripped _____________________
+tests\test_tools.py:156: in test_null_stripped
+    assert "\x00" not in inp.text
+E   AssertionError: assert '\x00' not in 'Hello\x00World'
+E     
+E     '\x00' is contained here:
+E       Hello World
+E     ?      +
+___________________ TestTypeTextInput.test_escape_stripped ____________________
+tests\test_tools.py:160: in test_escape_stripped
+    assert "\x1b" not in inp.text
+E   AssertionError: assert '\x1b' not in 'Hello\x1bWorld'
+E     
+E     '\x1b' is contained here:
+E       HelloWorld
+E     ?      +
+_ TestToolDispatcher.test_dispatch_request_user_confirmation_no_app_controller _
+tests\test_tools.py:265: in test_dispatch_request_user_confirmation_no_app_controller
+    assert result.get("ok") is True or result.get("confirmed") is False
+E   assert (False is True or None is False)
+E    +  where False = <built-in method get of dict object at 0x0000016444B30440>('ok')
+E    +    where <built-in method get of dict object at 0x0000016444B30440> = {'ok': False, 'error': "Tool error: ToolDispatcher._request_user_confirmation() missing 1 required positional argument: 'action_type'"}.get
+E    +  and   None = <built-in method get of dict object at 0x0000016444B30440>('confirmed')
+E    +    where <built-in method get of dict object at 0x0000016444B30440> = {'ok': False, 'error': "Tool error: ToolDispatcher._request_user_confirmation() missing 1 required positional argument: 'action_type'"}.get
+---------------------------- Captured stderr call -----------------------------
+2026-07-02 15:58:48.191 | ERROR    | agent_uia.tools.dispatcher:dispatch:148 - Tool dispatch error: request_user_confirmation
+Traceback (most recent call last):
+
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pytest\__main__.py", line 9, in <module>
+    raise SystemExit(_console_main())
+                     └ <function _console_main at 0x000001644157EE50>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\config\__init__.py", line 253, in _console_main
+    code = _main(prog=_get_prog_name(sys.argv))
+           │          │              │   └ ['C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\site-packages\\pytest\\__main__.py', 'tests/test_tools.p...
+           │          │              └ <module 'sys' (built-in)>
+           │          └ <function _get_prog_name at 0x000001644157EA30>
+           └ <function _main at 0x000001644157ECF0>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\config\__init__.py", line 229, in _main
+    ret: ExitCode | int = config.hook.pytest_cmdline_main(config=config)
+         │                │      │    │                          └ <_pytest.config.Config object at 0x0000016441842CF0>
+         │                │      │    └ <HookCaller 'pytest_cmdline_main'>
+         │                │      └ <pluggy._hooks.HookRelay object at 0x00000164418417F0>
+         │                └ <_pytest.config.Config object at 0x0000016441842CF0>
+         └ <enum 'ExitCode'>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           │    │         │    │     │    │                  │       └ True
+           │    │         │    │     │    │                  └ {'config': <_pytest.config.Config object at 0x0000016441842CF0>}
+           │    │         │    │     │    └ <member '_hookimpls' of 'HookCaller' objects>
+           │    │         │    │     └ <HookCaller 'pytest_cmdline_main'>
+           │    │         │    └ <member 'name' of 'HookCaller' objects>
+           │    │         └ <HookCaller 'pytest_cmdline_main'>
+           │    └ <member '_hookexec' of 'HookCaller' objects>
+           └ <HookCaller 'pytest_cmdline_main'>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           │    │               │          │        │       └ True
+           │    │               │          │        └ {'config': <_pytest.config.Config object at 0x0000016441842CF0>}
+           │    │               │          └ [<HookImpl plugin_name='main', plugin=<module '_pytest.main' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3.14-...
+           │    │               └ 'pytest_cmdline_main'
+           │    └ <function _multicall at 0x0000016440D638A0>
+           └ <_pytest.config.PytestPluginManager object at 0x00000164418416A0>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+          │         │         └ [<_pytest.config.Config object at 0x0000016441842CF0>]
+          │         └ <member 'function' of 'HookImpl' objects>
+          └ <HookImpl plugin_name='main', plugin=<module '_pytest.main' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3.14-6...
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\main.py", line 377, in pytest_cmdline_main
+    return wrap_session(config, _main)
+           │            │       └ <function _main at 0x00000164416A56F0>
+           │            └ <_pytest.config.Config object at 0x0000016441842CF0>
+           └ <function wrap_session at 0x00000164416A5430>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\main.py", line 330, in wrap_session
+    session.exitstatus = doit(config, session) or 0
+    │       │            │    │       └ <Session  exitstatus=<ExitCode.OK: 0> testsfailed=3 testscollected=87>
+    │       │            │    └ <_pytest.config.Config object at 0x0000016441842CF0>
+    │       │            └ <function _main at 0x00000164416A56F0>
+    │       └ <ExitCode.OK: 0>
+    └ <Session  exitstatus=<ExitCode.OK: 0> testsfailed=3 testscollected=87>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\main.py", line 384, in _main
+    config.hook.pytest_runtestloop(session=session)
+    │      │    │                          └ <Session  exitstatus=<ExitCode.OK: 0> testsfailed=3 testscollected=87>
+    │      │    └ <HookCaller 'pytest_runtestloop'>
+    │      └ <pluggy._hooks.HookRelay object at 0x00000164418417F0>
+    └ <_pytest.config.Config object at 0x0000016441842CF0>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           │    │         │    │     │    │                  │       └ True
+           │    │         │    │     │    │                  └ {'session': <Session  exitstatus=<ExitCode.OK: 0> testsfailed=3 testscollected=87>}
+           │    │         │    │     │    └ <member '_hookimpls' of 'HookCaller' objects>
+           │    │         │    │     └ <HookCaller 'pytest_runtestloop'>
+           │    │         │    └ <member 'name' of 'HookCaller' objects>
+           │    │         └ <HookCaller 'pytest_runtestloop'>
+           │    └ <member '_hookexec' of 'HookCaller' objects>
+           └ <HookCaller 'pytest_runtestloop'>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           │    │               │          │        │       └ True
+           │    │               │          │        └ {'session': <Session  exitstatus=<ExitCode.OK: 0> testsfailed=3 testscollected=87>}
+           │    │               │          └ [<HookImpl plugin_name='main', plugin=<module '_pytest.main' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3.14-...
+           │    │               └ 'pytest_runtestloop'
+           │    └ <function _multicall at 0x0000016440D638A0>
+           └ <_pytest.config.PytestPluginManager object at 0x00000164418416A0>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+          │         │         └ [<Session  exitstatus=<ExitCode.OK: 0> testsfailed=3 testscollected=87>]
+          │         └ <member 'function' of 'HookImpl' objects>
+          └ <HookImpl plugin_name='main', plugin=<module '_pytest.main' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3.14-6...
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\main.py", line 408, in pytest_runtestloop
+    item.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
+    │    │                                        │              └ <Function test_dispatch_read_screen_state>
+    │    │                                        └ <Function test_dispatch_request_user_confirmation_no_app_controller>
+    │    └ <member 'config' of 'Node' objects>
+    └ <Function test_dispatch_request_user_confirmation_no_app_controller>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           │    │         │    │     │    │                  │       └ True
+           │    │         │    │     │    │                  └ {'item': <Function test_dispatch_request_user_confirmation_no_app_controller>, 'nextitem': <Function test_dispatch_read_scree...
+           │    │         │    │     │    └ <member '_hookimpls' of 'HookCaller' objects>
+           │    │         │    │     └ <HookCaller 'pytest_runtest_protocol'>
+           │    │         │    └ <member 'name' of 'HookCaller' objects>
+           │    │         └ <HookCaller 'pytest_runtest_protocol'>
+           │    └ <member '_hookexec' of 'HookCaller' objects>
+           └ <HookCaller 'pytest_runtest_protocol'>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           │    │               │          │        │       └ True
+           │    │               │          │        └ {'item': <Function test_dispatch_request_user_confirmation_no_app_controller>, 'nextitem': <Function test_dispatch_read_scree...
+           │    │               │          └ [<HookImpl plugin_name='runner', plugin=<module '_pytest.runner' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3...
+           │    │               └ 'pytest_runtest_protocol'
+           │    └ <function _multicall at 0x0000016440D638A0>
+           └ <_pytest.config.PytestPluginManager object at 0x00000164418416A0>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+          │         │         └ [<Function test_dispatch_request_user_confirmation_no_app_controller>, <Function test_dispatch_read_screen_state>]
+          │         └ <member 'function' of 'HookImpl' objects>
+          └ <HookImpl plugin_name='runner', plugin=<module '_pytest.runner' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3....
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\runner.py", line 118, in pytest_runtest_protocol
+    runtestprotocol(item, nextitem=nextitem)
+    │               │              └ <Function test_dispatch_read_screen_state>
+    │               └ <Function test_dispatch_request_user_confirmation_no_app_controller>
+    └ <function runtestprotocol at 0x000001644168F320>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\runner.py", line 139, in runtestprotocol
+    reports.append(call_and_report(item, "call", log))
+    │       │      │               │             └ True
+    │       │      │               └ <Function test_dispatch_request_user_confirmation_no_app_controller>
+    │       │      └ <function call_and_report at 0x000001644168FCC0>
+    │       └ <method 'append' of 'list' objects>
+    └ [<TestReport 'tests/test_tools.py::TestToolDispatcher::test_dispatch_request_user_confirmation_no_app_controller' when='setup...
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\runner.py", line 249, in call_and_report
+    call = CallInfo.from_call(
+           │        └ <classmethod(<function CallInfo.from_call at 0x00000164416A4510>)>
+           └ <class '_pytest.runner.CallInfo'>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\runner.py", line 361, in from_call
+    result: TResult | None = func()
+            │                └ <function call_and_report.<locals>.<lambda> at 0x0000016445C4FAB0>
+            └ +TResult
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\runner.py", line 250, in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            │                 │       └ {}
+            │                 └ <Function test_dispatch_request_user_confirmation_no_app_controller>
+            └ <HookCaller 'pytest_runtest_call'>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           │    │         │    │     │    │                  │       └ False
+           │    │         │    │     │    │                  └ {'item': <Function test_dispatch_request_user_confirmation_no_app_controller>}
+           │    │         │    │     │    └ <member '_hookimpls' of 'HookCaller' objects>
+           │    │         │    │     └ <HookCaller 'pytest_runtest_call'>
+           │    │         │    └ <member 'name' of 'HookCaller' objects>
+           │    │         └ <HookCaller 'pytest_runtest_call'>
+           │    └ <member '_hookexec' of 'HookCaller' objects>
+           └ <HookCaller 'pytest_runtest_call'>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           │    │               │          │        │       └ False
+           │    │               │          │        └ {'item': <Function test_dispatch_request_user_confirmation_no_app_controller>}
+           │    │               │          └ [<HookImpl plugin_name='threadexception', plugin=<module '_pytest.threadexception' from 'C:\\Users\\surun\\AppData\\Local\\Py...
+           │    │               └ 'pytest_runtest_call'
+           │    └ <function _multicall at 0x0000016440D638A0>
+           └ <_pytest.config.PytestPluginManager object at 0x00000164418416A0>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+          │         │         └ [<Function test_dispatch_request_user_confirmation_no_app_controller>]
+          │         └ <member 'function' of 'HookImpl' objects>
+          └ <HookImpl plugin_name='runner', plugin=<module '_pytest.runner' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3....
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\runner.py", line 184, in pytest_runtest_call
+    item.runtest()
+    │    └ <function Function.runtest at 0x0000016441763C10>
+    └ <Function test_dispatch_request_user_confirmation_no_app_controller>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\python.py", line 1707, in runtest
+    self.ihook.pytest_pyfunc_call(pyfuncitem=self)
+    │    │                                   └ <Function test_dispatch_request_user_confirmation_no_app_controller>
+    │    └ <property object at 0x0000016441635760>
+    └ <Function test_dispatch_request_user_confirmation_no_app_controller>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           │    │         │    │     │    │                  │       └ True
+           │    │         │    │     │    │                  └ {'pyfuncitem': <Function test_dispatch_request_user_confirmation_no_app_controller>}
+           │    │         │    │     │    └ <member '_hookimpls' of 'HookCaller' objects>
+           │    │         │    │     └ <HookCaller 'pytest_pyfunc_call'>
+           │    │         │    └ <member 'name' of 'HookCaller' objects>
+           │    │         └ <HookCaller 'pytest_pyfunc_call'>
+           │    └ <member '_hookexec' of 'HookCaller' objects>
+           └ <HookCaller 'pytest_pyfunc_call'>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           │    │               │          │        │       └ True
+           │    │               │          │        └ {'pyfuncitem': <Function test_dispatch_request_user_confirmation_no_app_controller>}
+           │    │               │          └ [<HookImpl plugin_name='python', plugin=<module '_pytest.python' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3...
+           │    │               └ 'pytest_pyfunc_call'
+           │    └ <function _multicall at 0x0000016440D638A0>
+           └ <_pytest.config.PytestPluginManager object at 0x00000164418416A0>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+          │         │         └ [<Function test_dispatch_request_user_confirmation_no_app_controller>]
+          │         └ <member 'function' of 'HookImpl' objects>
+          └ <HookImpl plugin_name='python', plugin=<module '_pytest.python' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3....
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\python.py", line 167, in pytest_pyfunc_call
+    result = testfunction(**testargs)
+             │              └ {}
+             └ <bound method TestToolDispatcher.test_dispatch_request_user_confirmation_no_app_controller of <tests.test_tools.TestToolDispa...
+
+  File "C:\kodo\type_and_talk\tests\test_tools.py", line 259, in test_dispatch_request_user_confirmation_no_app_controller
+    result = dispatcher.dispatch("request_user_confirmation", {
+             │          └ <function ToolDispatcher.dispatch at 0x00000164445F3110>
+             └ <agent_uia.tools.dispatcher.ToolDispatcher object at 0x0000016444A87410>
+
+> File "C:\kodo\type_and_talk\src\agent_uia\tools\dispatcher.py", line 133, in dispatch
+    result = self._dispatch_inner(tool_name, clean_args)
+             │    │               │          └ {'target': 'Delete button', 'risk_explanation': 'This will delete the item.', 'timeout_s': 5}
+             │    │               └ 'request_user_confirmation'
+             │    └ <function ToolDispatcher._dispatch_inner at 0x00000164445F2FB0>
+             └ <agent_uia.tools.dispatcher.ToolDispatcher object at 0x0000016444A87410>
+
+  File "C:\kodo\type_and_talk\src\agent_uia\tools\dispatcher.py", line 184, in _dispatch_inner
+    return self._request_user_confirmation(**arguments)
+           │    │                            └ {'target': 'Delete button', 'risk_explanation': 'This will delete the item.', 'timeout_s': 5}
+           │    └ <function ToolDispatcher._request_user_confirmation at 0x0000016444614510>
+           └ <agent_uia.tools.dispatcher.ToolDispatcher object at 0x0000016444A87410>
+
+TypeError: ToolDispatcher._request_user_confirmation() missing 1 required positional argument: 'action_type'
+____________________ TestControlRef.test_from_control_ref _____________________
+tests\test_tools.py:324: in test_from_control_ref
+    ref = ControlRef.from_control_ref(exec_ref, control_id="ctrl-1", window_id="win-1")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: type object 'ControlRef' has no attribute 'from_control_ref'
+_____________________ TestScreenStateSummary.test_to_dict _____________________
+tests\test_tools.py:344: in test_to_dict
+    d = summary.to_dict()
+        ^^^^^^^^^^^^^^^
+E   AttributeError: 'ScreenStateSummary' object has no attribute 'to_dict'
+============================== warnings summary ===============================
+tests/test_confirmation_dialog.py::test_yes_returns_yes
+tests/test_confirmation_dialog.py::test_auto_confirm_yes
+tests/test_confirmation_dialog.py::test_auto_confirm_no
+tests/test_confirmation_dialog.py::test_timeout_returns_timeout
+tests/test_confirmation_dialog.py::test_audit_log_recorded
+  C:\kodo\type_and_talk\src\agent_uia\ui\confirmation_dialog.py:262: DeprecationWarning: 'exec_' will be removed in the future. Use 'exec' instead.
+    dialog.exec_()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_tools.py::TestLaunchAppValidation::test_allows_quoted_arg
+FAILED tests/test_tools.py::TestTypeTextInput::test_null_stripped - Assertion...
+FAILED tests/test_tools.py::TestTypeTextInput::test_escape_stripped - Asserti...
+FAILED tests/test_tools.py::TestToolDispatcher::test_dispatch_request_user_confirmation_no_app_controller
+FAILED tests/test_tools.py::TestControlRef::test_from_control_ref - Attribute...
+FAILED tests/test_tools.py::TestScreenStateSummary::test_to_dict - AttributeE...
+================== 6 failed, 81 passed, 5 warnings in 1.70s ===================

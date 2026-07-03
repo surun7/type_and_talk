@@ -2,7 +2,9 @@
   <img src="https://img.shields.io/badge/platform-Windows%20only-0078D6?logo=windows&logoColor=white" alt="Windows only">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="Apache 2.0">
   <img src="https://img.shields.io/badge/python-3.11%2B-blue?logo=python&logoColor=white" alt="Python 3.11+">
-  <img src="https://img.shields.io/badge/status-pre--alpha-red" alt="Pre-alpha">
+  <img src="https://img.shields.io/badge/status-🔄%20active%20dev-orange" alt="Active development">
+  <img src="https://img.shields.io/badge/perf-optimized-brightgreen" alt="Performance optimized">
+  <img src="https://img.shields.io/badge/voice-WASM%20ASR%20+%20Edge%20TTS-blueviolet" alt="Voice input">
   <img src="https://img.shields.io/badge/vision-none-darkgreen" alt="No vision">
   <img src="https://img.shields.io/badge/screenshots-zero-darkgreen" alt="No screenshots">
 </p>
@@ -71,6 +73,45 @@ tnt run "Open Notepad, type 'Hello from TNT', and close it without saving."
 
 ---
 
+## 🖥️ Quick Start (GUI)
+
+```bash
+# Install with GUI dependencies
+pip install -e ".[dev]"
+
+# Launch the tray app
+tnt
+```
+
+A tray icon appears in your system tray (green = idle). Press **Ctrl+Shift+Space**
+to toggle the floating window. Type a command like "Open Notepad and type Hello"
+and press Enter. The response streams in real time.
+
+- The floating window auto-hides on success (configurable).
+- Right-click the tray icon for **Pause Agent** (toggles a paused state) and **Quit**.
+- Tray icon color reflects agent state: green (idle), yellow (thinking), gray (paused), red (error).
+
+---
+
+## 📝 First-Run Notes
+
+- **Global hotkey:** No special permissions required on Windows. If
+  ``Ctrl+Shift+Space`` is taken by another app, change it by editing
+  ``AppConfig.hotkey`` in the source (config file loading comes later).
+
+- **API key:** On first ``run_task`` without ``DEEPSEEK_API_KEY`` set, the
+  floating window shows a clear error. Set it via:
+  ```bash
+  set DEEPSEEK_API_KEY=sk-...
+  ```
+  Or create a ``.env`` file with ``DEEPSEEK_API_KEY=sk-...`` in the project root.
+
+- **Offscreen testing:** Run ``tnt ui-smoke`` for a headless GUI self-test that
+  verifies the floating window, status bar, and response area work end-to-end
+  with a mocked Planner.
+
+---
+
 ## 🧠 How It Works
 
 ```
@@ -124,6 +165,23 @@ TNT treats the LLM as **untrusted input**. Every action flows through a safety g
 
 See [`docs/SECURITY.md`](docs/SECURITY.md) for the full threat model.
 
+### Sensitive Actions — Confirmation Flow
+
+For destructive actions (delete, send, pay, submit, transfer, purchase, etc.),
+a **real modal dialog** pops up with full context:
+
+- Action type (e.g. "delete")
+- Target identifier (e.g. "Delete button in Outlook")
+- Risk explanation ("This will permanently move the selected email to Trash")
+- Countdown timer (default 30s — auto-refuses if no response)
+
+Three buttons: **Yes, do it** (Enter), **No, skip** (Esc), **Stop the whole task**
+(aborts the current Planner task). Every response is logged to ``audit.log``.
+
+If the LLM attempts a sensitive action without calling ``request_user_confirmation``
+first, the ToolDispatcher refuses it **before** reaching the executor — this is
+a hard server-side guard that the LLM cannot bypass.
+
 ---
 
 ## 📋 Hard Constraints
@@ -151,6 +209,88 @@ See [`docs/SECURITY.md`](docs/SECURITY.md) for the full threat model.
 
 ---
 
+## ⚡ Performance
+
+TNT includes a built-in performance monitoring system that tracks latency,
+memory usage, and cache efficiency in real time.
+
+| Metric | Target |
+|---|---|
+| Cold start (app → ready) | ≤ 1.5 s |
+| Hotkey → window visible | ≤ 100 ms |
+| LLM response cache hit | ≤ 5 ms |
+| Control tree cache hit | ≤ 1 ms |
+| Memory (idle) | ≤ 250 MB RSS |
+| Memory (during task) | ≤ 600 MB RSS |
+
+- **Performance tab** in the GUI main window shows live charts for LLM
+  call duration, cache hit rate, control tree fetch time, and memory RSS.
+- **`tnt perf`** CLI command runs a task and prints phase-level timing.
+- **`tnt perf-tail`** tails live metrics from `logs/perf.jsonl`.
+- **LLM response cache** (default 5 min TTL) avoids redundant API calls.
+- **Control tree cache** (default 3 s TTL) avoids repeated UIA enumeration.
+
+See [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) for the full tuning guide,
+including how to read each chart, common bottlenecks, and profiling
+slow tasks.
+
+---
+
+## 🎤 Voice Input
+
+TNT supports optional voice input via a Push-to-Talk (PTT) hotkey (Ctrl+Shift+V by default).
+
+### First Run
+
+On first launch, if no ASR model is installed, TNT shows an onboarding dialog:
+- Choose a model size: tiny (75 MB), base (140 MB, recommended), or small (460 MB).
+- Choose a download mirror: huggingface.co (default) or hf-mirror.com (China-friendly).
+- The download takes ~1-3 minutes on broadband and is **resumable**.
+- You can skip and use text-only mode.
+
+### Model Sizes
+
+| Size | Size on Disk | Accuracy | Speed |
+|---|---|---|---|
+| tiny | ~75 MB | Basic | Fastest |
+| base | ~140 MB | Good (recommended) | Fast |
+| small | ~460 MB | Better | Moderate |
+| medium | ~1.5 GB | High | Slow |
+| large-v3 | ~3 GB | Best | Slowest |
+
+Models can be switched later via `tnt model-download <size>`.
+
+### Usage
+
+1. Hold **Ctrl+Shift+V** (configurable) — a red indicator shows recording is active.
+2. Speak your command.
+3. Release — the audio is transcribed locally and submitted as text.
+4. If **TTS** is enabled (opt-in), the agent speaks the final answer back.
+
+### Privacy
+
+- All speech recognition runs **entirely offline** on your machine.
+- Audio data is held in memory only, never written to disk.
+- TTS (opt-in) sends only the final response text to Microsoft's Edge TTS endpoint.
+- A visible mic indicator is shown whenever recording is active.
+
+### CLI Commands
+
+```bash
+tnt asr-smoke              # Record 5s and transcribe (test)
+tnt tts-smoke "..."        # Speak text via TTS
+tnt model-download base    # Pre-download a model
+tnt model-list             # List all models and their status
+tnt model-delete base      # Remove a downloaded model
+```
+
+### Known Limitations
+- No wake-word detection.
+- Full-utterance transcription (not real-time streaming).
+- Whisper may hallucinate on silence; post-processing strips common patterns.
+
+---
+
 ## 🛠️ CLI Reference
 
 ```bash
@@ -158,6 +298,13 @@ tnt run "instruction"     # Single-shot: plan → execute → report
 tnt chat                  # Interactive REPL (coming in Prompt 3)
 tnt demo                  # UIA smoke test with Notepad (no LLM)
 tnt doctor                # Self-test: platform → safety → executor → Notepad
+tnt asr-smoke             # Record 5 s and transcribe (ASR smoke test)
+tnt tts-smoke "..."       # Synthesize text to speech and play
+tnt perf "instruction"    # Run a task and show phase-level timing
+tnt perf-tail             # Tail live metrics from logs/perf.jsonl
+tnt model-download base   # Pre-download a Whisper model
+tnt model-list            # List all models and their status
+tnt model-delete base     # Remove a downloaded model
 tnt --version             # Print version
 ```
 
@@ -175,13 +322,20 @@ type_and_talk/
 │   ├── planner.py            # ReAct loop (brain)
 │   ├── prompts/
 │   │   └── system_prompt.md  # LLM system prompt (editable!)
+│   ├── audio/                  # Voice input/output pipeline
+│   │   ├── model_manager.py    # Download/cache Whisper model weights
+│   │   ├── recognizer.py       # faster-whisper speech-to-text
+│   │   ├── recorder.py         # sounddevice audio capture
+│   │   ├── vad.py              # Voice activity detection
+│   │   └── synthesizer.py      # Edge TTS (opt-in)
 │   ├── pricing.json          # Model cost table
 │   ├── demo.py               # Demo with --llm / --no-llm
 │   └── main.py               # CLI entry (tnt command)
-├── tests/                    # pytest suite (~65 tests)
+├── tests/                    # pytest suite (~70 tests)
 ├── docs/
 │   ├── ARCHITECTURE.md       # Pipeline diagram + design rationale
-│   └── SECURITY.md           # Threat model + mitigations
+│   ├── SECURITY.md           # Threat model + mitigations
+│   └── PERFORMANCE.md        # Performance tuning guide
 ├── pyproject.toml
 └── LICENSE
 ```
@@ -190,9 +344,9 @@ type_and_talk/
 
 ## 🗺️ Roadmap
 
-- ✅ **Done:** Safety gate, UIA executor, LLM planner, 14 tools, CLI, demo
-- ⬜ **Next:** Interactive REPL (`tnt chat`), input layer, streaming UX
-- ⬜ **Later:** Packaging (MSI), CI/CD, ASR input
+- ✅ **Done:** Safety gate, UIA executor, LLM planner, 14 tools, CLI, demo, GUI shell (tray, floating window, hotkey), Voice input (Whisper ASR, PTT, first-run download, opt-in Edge TTS), Performance monitoring (cache, metrics, perf tab)
+- ⬜ **Next:** Interactive REPL (`tnt chat`), main settings window
+- ⬜ **Later:** Skill system, packaging (MSI), CI/CD
 
 ---
 

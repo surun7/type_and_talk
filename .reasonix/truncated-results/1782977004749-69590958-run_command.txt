@@ -1,0 +1,377 @@
+$ python -m pytest tests/test_hotkey.py tests/test_floating_window.py tests/test_app_controller.py -v --tb=short 2>&1
+[exit 1]
+============================= test session starts =============================
+platform win32 -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\python.exe
+cachedir: .pytest_cache
+rootdir: C:\kodo\type_and_talk
+configfile: pyproject.toml
+plugins: anyio-4.14.1, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 43 items
+
+tests/test_hotkey.py::test_parse_known_combinations[ctrl+shift+space-6-32] PASSED [  2%]
+tests/test_hotkey.py::test_parse_known_combinations[alt+f4-1-115] PASSED [  4%]
+tests/test_hotkey.py::test_parse_known_combinations[ctrl+alt+f12-3-123] PASSED [  6%]
+tests/test_hotkey.py::test_parse_known_combinations[win+e-8-69] PASSED   [  9%]
+tests/test_hotkey.py::test_parse_known_combinations[ctrl+c-2-67] PASSED  [ 11%]
+tests/test_hotkey.py::test_parse_known_combinations[ctrl+v-2-86] PASSED  [ 13%]
+tests/test_hotkey.py::test_parse_known_combinations[alt+tab-1-9] PASSED  [ 16%]
+tests/test_hotkey.py::test_parse_known_combinations[ctrl+shift+a-6-65] PASSED [ 18%]
+tests/test_hotkey.py::test_parse_known_combinations[shift+return-4-13] PASSED [ 20%]
+tests/test_hotkey.py::test_parse_known_combinations[alt+space-1-32] PASSED [ 23%]
+tests/test_hotkey.py::test_parse_known_combinations[ctrl+0-2-48] PASSED  [ 25%]
+tests/test_hotkey.py::test_parse_known_combinations[ctrl+9-2-57] PASSED  [ 27%]
+tests/test_hotkey.py::test_parse_known_combinations[shift+f1-4-112] PASSED [ 30%]
+tests/test_hotkey.py::test_parse_known_combinations[ctrl+backspace-2-8] PASSED [ 32%]
+tests/test_hotkey.py::test_rejects_reserved_combos[ctrl+alt+delete] PASSED [ 34%]
+tests/test_hotkey.py::test_rejects_reserved_combos[ctrl+escape] PASSED   [ 37%]
+tests/test_hotkey.py::test_rejects_reserved_combos[win+l] PASSED         [ 39%]
+tests/test_hotkey.py::test_rejects_reserved_combos[windows+l] PASSED     [ 41%]
+tests/test_hotkey.py::test_rejects_reserved_combos[ctrl+win+l] PASSED    [ 44%]
+tests/test_hotkey.py::test_rejects_invalid_strings[] PASSED              [ 46%]
+tests/test_hotkey.py::test_rejects_invalid_strings[space] PASSED         [ 48%]
+tests/test_hotkey.py::test_rejects_invalid_strings[ctrl+] PASSED         [ 51%]
+tests/test_hotkey.py::test_rejects_invalid_strings[+space] PASSED        [ 53%]
+tests/test_hotkey.py::test_rejects_invalid_strings[ctrl++space] PASSED   [ 55%]
+tests/test_hotkey.py::test_rejects_invalid_strings[unknownkey] PASSED    [ 58%]
+tests/test_hotkey.py::test_rejects_invalid_strings[ctrl+superkey] PASSED [ 60%]
+tests/test_hotkey.py::test_rejects_invalid_strings[supmod+space] PASSED  [ 62%]
+tests/test_hotkey.py::TestGlobalHotkeyLifecycle::test_start_calls_register PASSED [ 65%]
+tests/test_hotkey.py::TestGlobalHotkeyLifecycle::test_start_raises_on_conflict PASSED [ 67%]
+tests/test_hotkey.py::TestGlobalHotkeyLifecycle::test_stop_calls_unregister PASSED [ 69%]
+tests/test_hotkey.py::TestGlobalHotkeyLifecycle::test_start_twice_is_noop PASSED [ 72%]
+tests/test_hotkey.py::TestGlobalHotkeyLifecycle::test_stop_before_start_is_safe PASSED [ 74%]
+tests/test_hotkey.py::TestGlobalHotkeyLifecycle::test_is_registered_flag PASSED [ 76%]
+tests/test_hotkey.py::TestGlobalHotkeyLifecycle::test_start_after_stop_re_registers PASSED [ 79%]
+tests/test_floating_window.py::test_window_flags PASSED                  [ 81%]
+tests/test_floating_window.py::test_input_field_placeholder PASSED       [ 83%]
+tests/test_floating_window.py::test_close_event_ignored_and_hides PASSED [ 86%]
+tests/test_floating_window.py::test_streaming_final_answer FAILED        [ 88%]
+tests/test_app_controller.py::test_run_task_calls_planner PASSED         [ 90%]
+tests/test_app_controller.py::test_signals_fire_in_order FAILED          [ 93%]
+tests/test_app_controller.py::test_paused_short_circuits PASSED          [ 95%]
+tests/test_app_controller.py::test_history_appended_on_completion FAILED [ 97%]
+tests/test_app_controller.py::test_missing_api_key_does_not_crash_start PASSED [100%]
+
+================================== FAILURES ===================================
+_________________________ test_streaming_final_answer _________________________
+tests\test_floating_window.py:112: in test_streaming_final_answer
+    fw.set_final_answer("Done! Notepad is open.")
+src\agent_uia\ui\floating_window.py:189: in set_final_answer
+    cursor.movePosition(cursor.End)
+                        ^^^^^^^^^^
+E   AttributeError: 'PySide6.QtGui.QTextCursor' object has no attribute 'End'
+_________________________ test_signals_fire_in_order __________________________
+tests\test_app_controller.py:147: in test_signals_fire_in_order
+    assert "tool:→ launch_app" in joined
+E   assert 'tool:→ launch_app' in "status:Thinking... | status:Step 1 | finished:failed | status:Error | answer:Task failed: LLMCalled.__init__() missing 1 required positional argument: 'response'"
+---------------------------- Captured stderr call -----------------------------
+2026-07-02 15:23:24.616 | ERROR    | agent_uia.ui.app_controller:run_task:291 - Task failed unexpectedly
+Traceback (most recent call last):
+
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pytest\__main__.py", line 9, in <module>
+    raise SystemExit(_console_main())
+                     └ <function _console_main at 0x000001B3EC82EE50>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\config\__init__.py", line 253, in _console_main
+    code = _main(prog=_get_prog_name(sys.argv))
+           │          │              │   └ ['C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\site-packages\\pytest\\__main__.py', 'tests/test_hotkey....
+           │          │              └ <module 'sys' (built-in)>
+           │          └ <function _get_prog_name at 0x000001B3EC82EA30>
+           └ <function _main at 0x000001B3EC82ECF0>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\config\__init__.py", line 229, in _main
+    ret: ExitCode | int = config.hook.pytest_cmdline_main(config=config)
+         │                │      │    │                          └ <_pytest.config.Config object at 0x000001B3ECAF2CF0>
+         │                │      │    └ <HookCaller 'pytest_cmdline_main'>
+         │                │      └ <pluggy._hooks.HookRelay object at 0x000001B3ECAF17F0>
+         │                └ <_pytest.config.Config object at 0x000001B3ECAF2CF0>
+         └ <enum 'ExitCode'>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           │    │         │    │     │    │                  │       └ True
+           │    │         │    │     │    │                  └ {'config': <_pytest.config.Config object at 0x000001B3ECAF2CF0>}
+           │    │         │    │     │    └ <member '_hookimpls' of 'HookCaller' objects>
+           │    │         │    │     └ <HookCaller 'pytest_cmdline_main'>
+           │    │         │    └ <member 'name' of 'HookCaller' objects>
+           │    │         └ <HookCaller 'pytest_cmdline_main'>
+           │    └ <member '_hookexec' of 'HookCaller' objects>
+           └ <HookCaller 'pytest_cmdline_main'>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           │    │               │          │        │       └ True
+           │    │               │          │        └ {'config': <_pytest.config.Config object at 0x000001B3ECAF2CF0>}
+           │    │               │          └ [<HookImpl plugin_name='main', plugin=<module '_pytest.main' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3.14-...
+           │    │               └ 'pytest_cmdline_main'
+           │    └ <function _multicall at 0x000001B3EC0438A0>
+           └ <_pytest.config.PytestPluginManager object at 0x000001B3ECAF16A0>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+          │         │         └ [<_pytest.config.Config object at 0x000001B3ECAF2CF0>]
+          │         └ <member 'function' of 'HookImpl' objects>
+          └ <HookImpl plugin_name='main', plugin=<module '_pytest.main' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3.14-6...
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\main.py", line 377, in pytest_cmdline_main
+    return wrap_session(config, _main)
+           │            │       └ <function _main at 0x000001B3EC9556F0>
+           │            └ <_pytest.config.Config object at 0x000001B3ECAF2CF0>
+           └ <function wrap_session at 0x000001B3EC955430>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\main.py", line 330, in wrap_session
+    session.exitstatus = doit(config, session) or 0
+    │       │            │    │       └ <Session  exitstatus=<ExitCode.OK: 0> testsfailed=1 testscollected=43>
+    │       │            │    └ <_pytest.config.Config object at 0x000001B3ECAF2CF0>
+    │       │            └ <function _main at 0x000001B3EC9556F0>
+    │       └ <ExitCode.OK: 0>
+    └ <Session  exitstatus=<ExitCode.OK: 0> testsfailed=1 testscollected=43>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\main.py", line 384, in _main
+    config.hook.pytest_runtestloop(session=session)
+    │      │    │                          └ <Session  exitstatus=<ExitCode.OK: 0> testsfailed=1 testscollected=43>
+    │      │    └ <HookCaller 'pytest_runtestloop'>
+    │      └ <pluggy._hooks.HookRelay object at 0x000001B3ECAF17F0>
+    └ <_pytest.config.Config object at 0x000001B3ECAF2CF0>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           │    │         │    │     │    │                  │       └ True
+           │    │         │    │     │    │                  └ {'session': <Session  exitstatus=<ExitCode.OK: 0> testsfailed=1 testscollected=43>}
+           │    │         │    │     │    └ <member '_hookimpls' of 'HookCaller' objects>
+           │    │         │    │     └ <HookCaller 'pytest_runtestloop'>
+           │    │         │    └ <member 'name' of 'HookCaller' objects>
+           │    │         └ <HookCaller 'pytest_runtestloop'>
+           │    └ <member '_hookexec' of 'HookCaller' objects>
+           └ <HookCaller 'pytest_runtestloop'>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           │    │               │          │        │       └ True
+           │    │               │          │        └ {'session': <Session  exitstatus=<ExitCode.OK: 0> testsfailed=1 testscollected=43>}
+           │    │               │          └ [<HookImpl plugin_name='main', plugin=<module '_pytest.main' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3.14-...
+           │    │               └ 'pytest_runtestloop'
+           │    └ <function _multicall at 0x000001B3EC0438A0>
+           └ <_pytest.config.PytestPluginManager object at 0x000001B3ECAF16A0>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+          │         │         └ [<Session  exitstatus=<ExitCode.OK: 0> testsfailed=1 testscollected=43>]
+          │         └ <member 'function' of 'HookImpl' objects>
+          └ <HookImpl plugin_name='main', plugin=<module '_pytest.main' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3.14-6...
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\main.py", line 408, in pytest_runtestloop
+    item.config.hook.pytest_runtest_protocol(item=item, nextitem=nextitem)
+    │    │                                        │              └ <Coroutine test_paused_short_circuits>
+    │    │                                        └ <Coroutine test_signals_fire_in_order>
+    │    └ <member 'config' of 'Node' objects>
+    └ <Coroutine test_signals_fire_in_order>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           │    │         │    │     │    │                  │       └ True
+           │    │         │    │     │    │                  └ {'item': <Coroutine test_signals_fire_in_order>, 'nextitem': <Coroutine test_paused_short_circuits>}
+           │    │         │    │     │    └ <member '_hookimpls' of 'HookCaller' objects>
+           │    │         │    │     └ <HookCaller 'pytest_runtest_protocol'>
+           │    │         │    └ <member 'name' of 'HookCaller' objects>
+           │    │         └ <HookCaller 'pytest_runtest_protocol'>
+           │    └ <member '_hookexec' of 'HookCaller' objects>
+           └ <HookCaller 'pytest_runtest_protocol'>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           │    │               │          │        │       └ True
+           │    │               │          │        └ {'item': <Coroutine test_signals_fire_in_order>, 'nextitem': <Coroutine test_paused_short_circuits>}
+           │    │               │          └ [<HookImpl plugin_name='runner', plugin=<module '_pytest.runner' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3...
+           │    │               └ 'pytest_runtest_protocol'
+           │    └ <function _multicall at 0x000001B3EC0438A0>
+           └ <_pytest.config.PytestPluginManager object at 0x000001B3ECAF16A0>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+          │         │         └ [<Coroutine test_signals_fire_in_order>, <Coroutine test_paused_short_circuits>]
+          │         └ <member 'function' of 'HookImpl' objects>
+          └ <HookImpl plugin_name='runner', plugin=<module '_pytest.runner' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3....
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\runner.py", line 118, in pytest_runtest_protocol
+    runtestprotocol(item, nextitem=nextitem)
+    │               │              └ <Coroutine test_paused_short_circuits>
+    │               └ <Coroutine test_signals_fire_in_order>
+    └ <function runtestprotocol at 0x000001B3EC93F320>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\runner.py", line 139, in runtestprotocol
+    reports.append(call_and_report(item, "call", log))
+    │       │      │               │             └ True
+    │       │      │               └ <Coroutine test_signals_fire_in_order>
+    │       │      └ <function call_and_report at 0x000001B3EC93FCC0>
+    │       └ <method 'append' of 'list' objects>
+    └ [<TestReport 'tests/test_app_controller.py::test_signals_fire_in_order' when='setup' outcome='passed'>]
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\runner.py", line 249, in call_and_report
+    call = CallInfo.from_call(
+           │        └ <classmethod(<function CallInfo.from_call at 0x000001B3EC954510>)>
+           └ <class '_pytest.runner.CallInfo'>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\runner.py", line 361, in from_call
+    result: TResult | None = func()
+            │                └ <function call_and_report.<locals>.<lambda> at 0x000001B3EF8DE4B0>
+            └ +TResult
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\runner.py", line 250, in <lambda>
+    lambda: runtest_hook(item=item, **kwds),
+            │                 │       └ {}
+            │                 └ <Coroutine test_signals_fire_in_order>
+            └ <HookCaller 'pytest_runtest_call'>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           │    │         │    │     │    │                  │       └ False
+           │    │         │    │     │    │                  └ {'item': <Coroutine test_signals_fire_in_order>}
+           │    │         │    │     │    └ <member '_hookimpls' of 'HookCaller' objects>
+           │    │         │    │     └ <HookCaller 'pytest_runtest_call'>
+           │    │         │    └ <member 'name' of 'HookCaller' objects>
+           │    │         └ <HookCaller 'pytest_runtest_call'>
+           │    └ <member '_hookexec' of 'HookCaller' objects>
+           └ <HookCaller 'pytest_runtest_call'>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           │    │               │          │        │       └ False
+           │    │               │          │        └ {'item': <Coroutine test_signals_fire_in_order>}
+           │    │               │          └ [<HookImpl plugin_name='threadexception', plugin=<module '_pytest.threadexception' from 'C:\\Users\\surun\\AppData\\Local\\Py...
+           │    │               └ 'pytest_runtest_call'
+           │    └ <function _multicall at 0x000001B3EC0438A0>
+           └ <_pytest.config.PytestPluginManager object at 0x000001B3ECAF16A0>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+          │         │         └ [<Coroutine test_signals_fire_in_order>]
+          │         └ <member 'function' of 'HookImpl' objects>
+          └ <HookImpl plugin_name='runner', plugin=<module '_pytest.runner' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3....
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\runner.py", line 184, in pytest_runtest_call
+    item.runtest()
+    │    └ <function PytestAsyncioFunction.runtest at 0x000001B3EF1B56F0>
+    └ <Coroutine test_signals_fire_in_order>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pytest_asyncio\plugin.py", line 569, in runtest
+    super().runtest()
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\python.py", line 1707, in runtest
+    self.ihook.pytest_pyfunc_call(pyfuncitem=self)
+    │    │                                   └ <Coroutine test_signals_fire_in_order>
+    │    └ <property object at 0x000001B3EC8E9620>
+    └ <Coroutine test_signals_fire_in_order>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+           │    │         │    │     │    │                  │       └ True
+           │    │         │    │     │    │                  └ {'pyfuncitem': <Coroutine test_signals_fire_in_order>}
+           │    │         │    │     │    └ <member '_hookimpls' of 'HookCaller' objects>
+           │    │         │    │     └ <HookCaller 'pytest_pyfunc_call'>
+           │    │         │    └ <member 'name' of 'HookCaller' objects>
+           │    │         └ <HookCaller 'pytest_pyfunc_call'>
+           │    └ <member '_hookexec' of 'HookCaller' objects>
+           └ <HookCaller 'pytest_pyfunc_call'>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+           │    │               │          │        │       └ True
+           │    │               │          │        └ {'pyfuncitem': <Coroutine test_signals_fire_in_order>}
+           │    │               │          └ [<HookImpl plugin_name='python', plugin=<module '_pytest.python' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3...
+           │    │               └ 'pytest_pyfunc_call'
+           │    └ <function _multicall at 0x000001B3EC0438A0>
+           └ <_pytest.config.PytestPluginManager object at 0x000001B3ECAF16A0>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+          │         │         └ [<Coroutine test_signals_fire_in_order>]
+          │         └ <member 'function' of 'HookImpl' objects>
+          └ <HookImpl plugin_name='python', plugin=<module '_pytest.python' from 'C:\\Users\\surun\\AppData\\Local\\Python\\pythoncore-3....
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\_pytest\python.py", line 167, in pytest_pyfunc_call
+    result = testfunction(**testargs)
+             │              └ {'qapp': <PySide6.QtWidgets.QApplication(0x1b3ed2148e0) at 0x000001B3EF8CD0C0>, 'mock_planner': <tests.test_app_controller.mo...
+             └ <function test_signals_fire_in_order at 0x000001B3EF8DE610>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\pytest_asyncio\plugin.py", line 905, in inner
+    runner.run(coro, context=context)
+    │      │   │             └ <_contextvars.Context object at 0x000001B3F1661B80>
+    │      │   └ <coroutine object test_signals_fire_in_order at 0x000001B3F032ACD0>
+    │      └ <function Runner.run at 0x000001B3EF118A90>
+    └ <asyncio.runners.Runner object at 0x000001B3F04BAFD0>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\runners.py", line 128, in run
+    return self._loop.run_until_complete(task)
+           │    │     │                  └ <Task pending name='Task-4' coro=<test_signals_fire_in_order() running at C:\kodo\type_and_talk\tests\test_app_controller.py:...
+           │    │     └ <function BaseEventLoop.run_until_complete at 0x000001B3EF0FCEB0>
+           │    └ <ProactorEventLoop running=True closed=False debug=False>
+           └ <asyncio.runners.Runner object at 0x000001B3F04BAFD0>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py", line 706, in run_until_complete
+    self.run_forever()
+    │    └ <function BaseEventLoop.run_forever at 0x000001B3EF0FCE00>
+    └ <ProactorEventLoop running=True closed=False debug=False>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+    │    └ <function BaseEventLoop._run_once at 0x000001B3EF0FEF00>
+    └ <ProactorEventLoop running=True closed=False debug=False>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py", line 2056, in _run_once
+    handle._run()
+    │      └ <function Handle._run at 0x000001B3ED7CB320>
+    └ <Handle <_asyncio.TaskStepMethWrapper object at 0x000001B3F1692BF0>()>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+    │    │            │    │           │    └ <member '_args' of 'Handle' objects>
+    │    │            │    │           └ <Handle <_asyncio.TaskStepMethWrapper object at 0x000001B3F1692BF0>()>
+    │    │            │    └ <member '_callback' of 'Handle' objects>
+    │    │            └ <Handle <_asyncio.TaskStepMethWrapper object at 0x000001B3F1692BF0>()>
+    │    └ <member '_context' of 'Handle' objects>
+    └ <Handle <_asyncio.TaskStepMethWrapper object at 0x000001B3F1692BF0>()>
+
+  File "C:\kodo\type_and_talk\tests\test_app_controller.py", line 142, in test_signals_fire_in_order
+    await ctrl.run_task("test")
+          │    └ <function AppController.run_task at 0x000001B3F1680A90>
+          └ <agent_uia.ui.app_controller.AppController(0x1b3ed352420) at 0x000001B3EF76AFC0>
+
+> File "C:\kodo\type_and_talk\src\agent_uia\ui\app_controller.py", line 245, in run_task
+    result = await self._planner.run(
+                   │    │        └ <function test_signals_fire_in_order.<locals>._TranscriptPlanner.run at 0x000001B3F1681D20>
+                   │    └ <tests.test_app_controller.test_signals_fire_in_order.<locals>._TranscriptPlanner object at 0x000001B3EF8B1D30>
+                   └ <agent_uia.ui.app_controller.AppController(0x1b3ed352420) at 0x000001B3EF76AFC0>
+
+  File "C:\kodo\type_and_talk\tests\test_app_controller.py", line 113, in run
+    await on_event(LLMCalled(step_number=1))
+          │        └ <class 'agent_uia.planner.LLMCalled'>
+          └ <bound method AppController._on_planner_event of <agent_uia.ui.app_controller.AppController(0x1b3ed352420) at 0x000001B3EF76A...
+
+TypeError: LLMCalled.__init__() missing 1 required positional argument: 'response'
+_____________________ test_history_appended_on_completion _____________________
+tests\test_app_controller.py:199: in test_history_appended_on_completion
+    assert ctrl._history_path.exists(), "History file was not created"
+E   AssertionError: History file was not created
+E   assert False
+E    +  where False = exists()
+E    +    where exists = WindowsPath('C:/Users/surun/AppData/Local/Temp/pytest-of-surun/pytest-1/test_history_appended_on_compl0/logs/history.jsonl').exists
+E    +      where WindowsPath('C:/Users/surun/AppData/Local/Temp/pytest-of-surun/pytest-1/test_history_appended_on_compl0/logs/history.jsonl') = <agent_uia.ui.app_controller.AppController(0x1b3ed351b10) at 0x000001B3F16D9A40>._history_path
+---------------------------- Captured stderr call -----------------------------
+2026-07-02 15:23:24.626 | ERROR    | agent_uia.ui.app_controller:_write_history_entry:468 - Failed to write history entry
+Traceback (most recent call last):
+
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\threading.py", line 1044, in _bootstrap
+    self._bootstrap_inner()
+    │    └ <function Thread._bootstrap_inner at 0x000001B3EC531C70>
+    └ <Thread(asyncio_0, started 38412)>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\threading.py", line 1082, in _bootstrap_inner
+    self._context.run(self.run)
+    │    │        │   │    └ <function Thread.run at 0x000001B3EC531900>
+    │    │        │   └ <Thread(asyncio_0, started 38412)>
+    │    │        └ <method 'run' of '_contextvars.Context' objects>
+    │    └ <_contextvars.Context object at 0x000001B3F167D480>
+    └ <Thread(asyncio_0, started 38412)>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\threading.py", line 1024, in run
+    self._target(*self._args, **self._kwargs)
+    │    │        │    │        │    └ {}
+    │    │        │    │        └ <Thread(asyncio_0, started 38412)>
+    │    │        │    └ (<weakref at 0x000001B3F16E4B80; to 'concurrent.futures.thread.ThreadPoolExecutor' at 0x000001B3F16ADE50>, <concurrent.future...
+    │    │        └ <Thread(asyncio_0, started 38412)>
+    │    └ <function _worker at 0x000001B3F1683270>
+    └ <Thread(asyncio_0, started 38412)>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\concurrent\futures\thread.py", line 119, in _worker
+    work_item.run(ctx)
+    │         │   └ <concurrent.futures.thread.WorkerContext object at 0x000001B3F16AE350>
+    │         └ <function _WorkItem.run at 0x000001B3F1683740>
+    └ <concurrent.futures.thread._WorkItem object at 0x000001B3F16AE210>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\concurrent\futures\thread.py", line 86, in run
+    result = ctx.run(self.task)
+             │   │   │    └ (functools.partial(<built-in method run of _contextvars.Context object at 0x000001B3EF8EC300>, <bound method AppController._w...
+             │   │   └ <concurrent.futures.thread._WorkItem object at 0x000001B3F16AE210>
+             │   └ <function WorkerContext.run at 0x000001B3F16835E0>
+             └ <concurrent.futures.thread.WorkerContext object at 0x000001B3F16AE350>
+  File "C:\Users\surun\AppData\Local\Python\pythoncore-3.14-64\Lib\concurrent\futures\thread.py", line 73, in run
+    return fn(*args, **kwargs)
+           │   │       └ {}
+           │   └ ()
+           └ functools.partial(<built-in method run of _contextvars.Context object at 0x000001B3EF8EC300>, <bound method AppController._wr...
+
+> File "C:\kodo\type_and_talk\src\agent_uia\ui\app_controller.py", line 465, in _write_history_entry
+    with open(self._history_path, "a", encoding="utf-8") as f:
+              │    └ WindowsPath('C:/Users/surun/AppData/Local/Temp/pytest-of-surun/pytest-1/test_history_appended_on_compl0/logs/history.jsonl')
+              └ <agent_uia.ui.app_controller.AppController(0x1b3ed351b10) at 0x000001B3F16D9A40>
+
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\surun\\AppData\\Local\\Temp\\pytest-of-surun\\pytest-1\\test_history_appended_on_compl0\\logs\\history.jsonl'
+=========================== short test summary info ===========================
+FAILED tests/test_floating_window.py::test_streaming_final_answer - Attribute...
+FAILED tests/test_app_controller.py::test_signals_fire_in_order - assert 'too...
+FAILED tests/test_app_controller.py::test_history_appended_on_completion - As...
+======================== 3 failed, 40 passed in 0.39s =========================

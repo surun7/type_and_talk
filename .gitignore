@@ -53,3 +53,14 @@ htmlcov/
 
 # Audit log (generated at runtime)
 audit.log
+
+# Local model cache (downloaded on first run, not bundled)
+models/
+*.bin
+*.pt
+*.safetensors
+*.gguf
+*.ggml
+
+# Reasonix session knowledge
+REASONIX.md

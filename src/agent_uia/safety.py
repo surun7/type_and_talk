@@ -14,14 +14,17 @@ Design invariants
 from __future__ import annotations
 
 import json
+import os
 import threading
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from enum import Enum, auto
 from pathlib import Path
 
 from loguru import logger
 from pydantic import BaseModel, Field
+
+from agent_uia.paths import get_logs_dir
 
 __all__ = [
     "SafetyVerdict",
@@ -82,6 +85,23 @@ _DEFAULT_BLOCKED_EXECUTABLES: set[str] = {
     "wegame.exe",
     "wegameclient.exe",
     "tgp_daemon.exe",
+    # High-risk system executables that can run arbitrary commands or modify
+    # the OS. Launching these via an LLM-driven agent would amount to shell
+    # access. The blocklist takes precedence over any executable-path trickery.
+    "cmd.exe",
+    "powershell.exe",
+    "pwsh.exe",
+    "wscript.exe",
+    "cscript.exe",
+    "mshta.exe",
+    "regedit.exe",
+    "regedt32.exe",
+    "certutil.exe",
+    "bitsadmin.exe",
+    "curl.exe",
+    "wget.exe",
+    "ftp.exe",
+    "telnet.exe",
 }
 
 _DEFAULT_LOGIN_KEYWORDS: set[str] = {
@@ -101,6 +121,8 @@ _DEFAULT_LOGIN_KEYWORDS: set[str] = {
 _DEFAULT_ALWAYS_CONFIRM_ACTIONS: set[str] = {
     "delete",
     "delete_file",
+    "file_move",
+    "file_mkdir",
     "send_message",
     "send",
     "purchase",
@@ -109,6 +131,7 @@ _DEFAULT_ALWAYS_CONFIRM_ACTIONS: set[str] = {
     "pay",
     "transfer",
     "transfer_money",
+    "close_account",
 }
 
 # Recognized interactive apps for login-screen detection.
@@ -125,6 +148,25 @@ _RECOGNIZED_LOGIN_APPS: set[str] = {
     "ubisoftconnect.exe",
     "gog galaxy.exe",
 }
+
+_SENSITIVE_FILE_EXTENSIONS: set[str] = {
+    ".exe", ".bat", ".cmd", ".ps1", ".sh", ".vbs", ".js", ".jar",
+    ".scr", ".com", ".msi",
+}
+
+
+def is_dangerous_extension(filename: str) -> bool:
+    """Check whether *filename* has a sensitive executable-file extension.
+
+    Args:
+        filename: The file name (with or without path).
+
+    Returns:
+        ``True`` if the extension is considered dangerous (e.g. ``.exe``,
+        ``.bat``, ``.ps1``).
+    """
+    _, ext = os.path.splitext(filename)
+    return ext.lower() in _SENSITIVE_FILE_EXTENSIONS
 
 # ── types ────────────────────────────────────────────────────────────────────
 
@@ -176,6 +218,7 @@ class SafetyEvent:
     target: str
     verdict: str
     reason: str
+    user_response: str = "n/a"
 
 
 class SafetyConfig(BaseModel):
@@ -203,7 +246,7 @@ class SafetyConfig(BaseModel):
         default_factory=lambda: _DEFAULT_ALWAYS_CONFIRM_ACTIONS.copy()
     )
     enable_audit_log: bool = True
-    audit_log_path: Path = Field(default=Path("./logs/audit.log"))
+    audit_log_path: Path = Field(default_factory=lambda: get_logs_dir() / "audit.log")
 
 
 # ── errors ───────────────────────────────────────────────────────────────────
@@ -232,6 +275,11 @@ class SafetyGate:
         self._events: list[SafetyEvent] = []
         self._lock = threading.Lock()
 
+    @property
+    def config(self) -> SafetyConfig:
+        """The immutable configuration this gate was constructed with."""
+        return self._config
+
     # -- check_app -------------------------------------------------------------
 
     def check_app(
@@ -256,25 +304,9 @@ class SafetyGate:
         exe_lower = exe_name.lower() if exe_name else None
         title_lower = window_title.lower() if window_title else None
 
-        # 1. Blocklist check — executable name.
-        if exe_lower and exe_lower in self._config.blocked_executables:
-            decision = SafetyDecision(
-                verdict=SafetyVerdict.BLOCK_UNSUPPORTED,
-                reason=(
-                    "This app is on the blocklist. agent-uia intentionally "
-                    "does not support it for safety/ToS reasons."
-                ),
-            )
-            self._record(
-                actor="safety_gate",
-                action_type="check_app",
-                target=f"exe={exe_lower} title={title_lower or 'N/A'}",
-                verdict=decision.verdict.name,
-                reason=decision.reason,
-            )
-            return decision
-
-        # 2. Login screen detection for recognized interactive apps.
+        # 1. Login screen detection for recognized interactive apps.
+        #    This takes precedence over the blocklist so that the safety gate
+        #    returns a specific login-screen verdict even for blocked apps.
         if title_lower and exe_lower and exe_lower in _RECOGNIZED_LOGIN_APPS:
             for keyword in self._config.login_window_keywords:
                 if keyword in title_lower:
@@ -294,6 +326,24 @@ class SafetyGate:
                         reason=decision.reason,
                     )
                     return decision
+
+        # 2. Blocklist check — executable name.
+        if exe_lower and exe_lower in self._config.blocked_executables:
+            decision = SafetyDecision(
+                verdict=SafetyVerdict.BLOCK_UNSUPPORTED,
+                reason=(
+                    "This app is on the blocklist. agent-uia intentionally "
+                    "does not support it for safety/ToS reasons."
+                ),
+            )
+            self._record(
+                actor="safety_gate",
+                action_type="check_app",
+                target=f"exe={exe_lower} title={title_lower or 'N/A'}",
+                verdict=decision.verdict.name,
+                reason=decision.reason,
+            )
+            return decision
 
         # 3. Default — allow.
         decision = SafetyDecision(verdict=SafetyVerdict.ALLOW, reason="App is allowed.")
@@ -369,15 +419,17 @@ class SafetyGate:
         target: str,
         verdict: str,
         reason: str,
+        user_response: str = "n/a",
     ) -> None:
         """Convenience wrapper: build a ``SafetyEvent`` and call ``record_event``."""
         event = SafetyEvent(
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             actor=actor,
             action_type=action_type,
             target=target,
             verdict=verdict,
             reason=reason,
+            user_response=user_response,
         )
         self.record_event(event)
 
@@ -396,6 +448,7 @@ class SafetyGate:
                             "target": event.target,
                             "verdict": event.verdict,
                             "reason": event.reason,
+                            "user_response": event.user_response,
                         },
                         ensure_ascii=False,
                     )

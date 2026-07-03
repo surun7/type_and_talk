@@ -11,10 +11,11 @@ from __future__ import annotations
 import os
 import re
 import sys
-from pathlib import Path
 from typing import Any
 
 from loguru import logger
+
+from agent_uia.paths import get_logs_dir
 
 __all__ = ["configure_logging", "redact", "logger"]
 
@@ -100,8 +101,7 @@ def configure_logging(*, level: str = "INFO") -> None:
     )
 
     # Rotating file sink.
-    logs_dir = Path("logs")
-    logs_dir.mkdir(parents=True, exist_ok=True)
+    logs_dir = get_logs_dir()
     logger.add(
         logs_dir / "agent-uia.log",
         level="DEBUG",

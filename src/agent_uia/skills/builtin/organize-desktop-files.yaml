@@ -1,0 +1,49 @@
+id: organize-desktop-files
+name: 整理桌面文件
+description: 把桌面上的文件按扩展名归类到「文档」「图片」「其他」文件夹中。
+version: "0.1.0"
+author: tnt-team
+license: MIT
+tags: [productivity, files, desktop]
+inputs:
+  - name: dry_run
+    type: boolean
+    description: 如果是 true，只列出将要移动的文件而不实际移动
+    default: true
+    required: false
+permissions: [file_list, file_mkdir, file_move]
+steps:
+  - kind: tool
+    id: list
+    name: 列出桌面文件
+    tool: file_list
+    args:
+      directory: desktop
+      pattern: "*"
+      limit: 500
+  - kind: tool
+    id: mkdir_docs
+    name: 创建「文档」文件夹
+    tool: file_mkdir
+    args:
+      directory: desktop
+      name: 文档_已整理
+  - kind: tool
+    id: mkdir_pics
+    name: 创建「图片」文件夹
+    tool: file_mkdir
+    args:
+      directory: desktop
+      name: 图片_已整理
+  - kind: tool
+    id: mkdir_other
+    name: 创建「其他」文件夹
+    tool: file_mkdir
+    args:
+      directory: desktop
+      name: 其他_已整理
+  - kind: complete
+    id: done
+    name: 完成
+    message: 已在桌面创建三个整理文件夹。
+    depends_on: [mkdir_docs, mkdir_pics, mkdir_other]

@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2026 agent-uia contributors
+id: open-calculator
+name: 打开计算器
+description: 启动 Windows 计算器应用。
+version: "0.1.0"
+author: tnt-team
+license: MIT
+tags: [productivity, calculator]
+inputs: []
+permissions: [launch_app, wait_for_window]
+on_error: STOP
+on_block: STOP
+steps:
+  - kind: tool
+    id: launch
+    name: 启动 calc.exe
+    tool: launch_app
+    args:
+      executable: calc.exe
+      args: []
+    timeout_s: 10
+  - kind: complete
+    id: done
+    name: 完成
+    message: 计算器已打开。
+    depends_on: [launch]

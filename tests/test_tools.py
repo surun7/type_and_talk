@@ -32,6 +32,13 @@ from agent_uia.tools import (
     ScreenStateSummary,
     _validate_launch_args,
 )
+from agent_uia.tools.specs.clipboard_read import ClipboardReadInput
+from agent_uia.tools.specs.clipboard_write import ClipboardWriteInput
+from agent_uia.tools.specs.file_list import FileListInput
+from agent_uia.tools.specs.file_mkdir import FileMkdirInput
+from agent_uia.tools.specs.file_move import FileMoveInput
+from agent_uia.tools.specs.llm_complete import LlmCompleteInput
+from agent_uia.tools.specs.system_info import SystemInfoInput
 
 
 # ── tool spec validity ───────────────────────────────────────────────────────
@@ -58,8 +65,8 @@ class TestToolSpecs:
     ]
 
     def test_all_tools_in_all_specs(self) -> None:
-        """ALL_TOOL_SPECS has 14 entries."""
-        assert len(ALL_TOOL_SPECS) == 14
+        """ALL_TOOL_SPECS has 21 entries."""
+        assert len(ALL_TOOL_SPECS) == 21
 
     def test_each_spec_is_valid_openai_function(self) -> None:
         """Every spec dict has type: function and a valid function block."""
@@ -214,10 +221,10 @@ class TestToolDispatcher:
         executor = UIAExecutor(safety_gate=gate)
         return ToolDispatcher(executor=executor, safety_gate=gate)
 
-    def test_known_tools_has_all_14(self) -> None:
+    def test_known_tools_has_all(self) -> None:
         dispatcher = self._make_dispatcher()
         tools = dispatcher.known_tools()
-        assert len(tools) == 14
+        assert len(tools) == 21
         assert "launch_app" in tools
         assert "click" in tools
         assert "read_screen_state" in tools
@@ -228,20 +235,23 @@ class TestToolDispatcher:
         assert dispatcher.validate_tool_name("click") is True
         assert dispatcher.validate_tool_name("nonexistent") is False
 
-    def test_dispatch_unknown_tool(self) -> None:
+    @pytest.mark.asyncio
+    async def test_dispatch_unknown_tool(self) -> None:
         dispatcher = self._make_dispatcher()
-        result = dispatcher.dispatch("nonexistent", {})
+        result = await dispatcher.dispatch("nonexistent", {})
         assert result["ok"] is False
         assert "Unknown tool" in result["error"]
 
-    def test_dispatch_launch_app_valorant_blocked(self) -> None:
+    @pytest.mark.asyncio
+    async def test_dispatch_launch_app_valorant_blocked(self) -> None:
         """launch_app with a blocked executable returns BLOCKED."""
         dispatcher = self._make_dispatcher()
-        result = dispatcher.dispatch("launch_app", {"executable": "VALORANT-Win64-Shipping.exe"})
+        result = await dispatcher.dispatch("launch_app", {"executable": "VALORANT-Win64-Shipping.exe"})
         assert result["ok"] is False
         assert "BLOCKED" in result["error"]
 
-    def test_dispatch_launch_app_notepad_allowed(self) -> None:
+    @pytest.mark.asyncio
+    async def test_dispatch_launch_app_notepad_allowed(self) -> None:
         """launch_app with notepad is allowed (by safety gate)."""
         dispatcher = self._make_dispatcher()
         with mock.patch("subprocess.Popen") as mock_popen:
@@ -249,30 +259,33 @@ class TestToolDispatcher:
             mock_proc.pid = 12345
             mock_popen.return_value = mock_proc
 
-            result = dispatcher.dispatch("launch_app", {"executable": "notepad.exe"})
+            result = await dispatcher.dispatch("launch_app", {"executable": "notepad.exe"})
             assert result["ok"] is True
             assert "pid" in result
 
-    def test_dispatch_request_user_confirmation_returns_false(self) -> None:
+    @pytest.mark.asyncio
+    async def test_dispatch_request_user_confirmation_returns_false(self) -> None:
         """request_user_confirmation returns {confirmed: false} (not interactive in dispatch)."""
         dispatcher = self._make_dispatcher()
-        result = dispatcher.dispatch("request_user_confirmation", {"message": "Delete?"})
+        result = await dispatcher.dispatch("request_user_confirmation", {"action_type": "delete", "target": "Delete?", "risk_explanation": "test", "timeout_s": 5})
         assert result["ok"] is True
         assert result["confirmed"] is False  # Non-interactive dispatch.
 
-    def test_dispatch_read_screen_state(self) -> None:
+    @pytest.mark.asyncio
+    async def test_dispatch_read_screen_state(self) -> None:
         """read_screen_state returns window list."""
         dispatcher = self._make_dispatcher()
         with mock.patch.object(dispatcher._executor, "list_windows", return_value=[]):
-            result = dispatcher.dispatch("read_screen_state", {})
+            result = await dispatcher.dispatch("read_screen_state", {})
             assert result["ok"] is True
             assert "windows" in result
             assert isinstance(result["windows"], list)
 
-    def test_launch_app_rejects_shell_injection(self) -> None:
+    @pytest.mark.asyncio
+    async def test_launch_app_rejects_shell_injection(self) -> None:
         """launch_app rejects args with shell metacharacters."""
         dispatcher = self._make_dispatcher()
-        result = dispatcher.dispatch("launch_app", {
+        result = await dispatcher.dispatch("launch_app", {
             "executable": "notepad.exe",
             "args": ["calc.exe && evil"],
         })

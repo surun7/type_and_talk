@@ -27,6 +27,7 @@ class TestPlatformCheck:
         with mock.patch("sys.platform", "linux"):
             # Re-import to trigger the guard with patched platform.
             import importlib
+
             import agent_uia.platform_check as pc
 
             with pytest.raises(RuntimeError, match="agent-uia requires Windows"):
@@ -35,6 +36,7 @@ class TestPlatformCheck:
     def test_reimport_does_not_re_raise_on_windows(self) -> None:
         """Re-importing the module does not cause a double raise."""
         import importlib
+
         import agent_uia.platform_check as pc
 
         # First import already happened. Reload should work fine on Windows.

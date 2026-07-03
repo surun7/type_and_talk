@@ -24,7 +24,6 @@ from agent_uia.safety import (
     UnsupportedAppError,
 )
 
-
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 
@@ -214,17 +213,44 @@ class TestUIAControlNode:
 class TestUIAExecutorSafetyEnforcement:
     """Verify safety gate is called before any UIA action."""
 
+    def _make_ref_with_window(self, exe_name: str = "notepad.exe"):
+        """Create a UIAControlRef whose parent chain ends at a known window."""
+        executor = UIAExecutor(safety_gate=_dummy_gate())
+        reg = executor._registry  # noqa: SLF001
+
+        fake_obj = mock.MagicMock()
+        fake_obj.GetParentControl.return_value = None  # stop walk at root
+
+        token = reg.register(fake_obj)
+        ref = UIAControlRef(token, reg)
+
+        # Patch ControlFromHandle to return a control that maps to a known exe.
+        fake_raw = mock.MagicMock()
+        fake_raw.NativeWindowHandle = 12345
+        fake_raw.ProcessId = 9999
+        fake_raw.Name = "Test Window"
+        fake_raw.ClassName = "TestClass"
+        fake_raw.BoundingRectangle = mock.MagicMock(
+            left=0, top=0, width=lambda: 100, height=lambda: 100
+        )
+
+        # Avoid hitting uiautomation.dll: short-circuit the import path.
+        with mock.patch(
+            "agent_uia.executor._uia.ControlFromHandle",
+            return_value=fake_raw,
+        ), mock.patch(
+            "agent_uia.executor._uia.GetProcessFilename",
+            return_value="C:\\Windows\\System32\\" + exe_name,
+        ):
+            return executor, ref, fake_obj
+
     def test_safety_called_before_click(self) -> None:
         """click calls the safety gate first."""
         with mock.patch(
             "agent_uia.executor.assert_app_allowed"
         ) as mock_assert:
             mock_assert.side_effect = UnsupportedAppError("blocked")
-            executor = UIAExecutor(safety_gate=_dummy_gate())
-            reg = executor._registry  # noqa: SLF001
-            fake_obj = mock.MagicMock()
-            token = reg.register(fake_obj)
-            ref = UIAControlRef(token, reg)
+            executor, ref, fake_obj = self._make_ref_with_window()
 
             with pytest.raises(UnsupportedAppError):
                 executor.click(ref)
@@ -234,14 +260,13 @@ class TestUIAExecutorSafetyEnforcement:
     def test_click_blocked_by_safety(self) -> None:
         """click raises if safety gate blocks the target app."""
         gate = _dummy_gate()
-        executor = UIAExecutor(safety_gate=gate)
-        reg = executor._registry  # noqa: SLF001
-        fake_obj = mock.MagicMock()
-        token = reg.register(fake_obj)
-        ref = UIAControlRef(token, reg)
+        executor, ref, _fake_obj = self._make_ref_with_window()
+        # Replace the safety gate to simulate the block decision.
+        executor._safety = gate  # noqa: SLF001
 
         with mock.patch.object(gate, "check_app") as mock_check:
             from agent_uia.safety import SafetyDecision, SafetyVerdict
+
             mock_check.return_value = SafetyDecision(
                 verdict=SafetyVerdict.BLOCK_UNSUPPORTED,
                 reason="blocked",
@@ -254,13 +279,9 @@ class TestUIAExecutorSafetyEnforcement:
         with mock.patch(
             "agent_uia.executor.assert_app_allowed"
         ) as mock_assert:
-            executor = UIAExecutor(safety_gate=_dummy_gate())
-            reg = executor._registry  # noqa: SLF001
-            fake_obj = mock.MagicMock()
+            executor, ref, fake_obj = self._make_ref_with_window()
             fake_vp = mock.MagicMock()
             fake_obj.GetValuePattern.return_value = fake_vp
-            token = reg.register(fake_obj)
-            ref = UIAControlRef(token, reg)
 
             executor.set_value(ref, "test")
             mock_assert.assert_called()
@@ -270,13 +291,9 @@ class TestUIAExecutorSafetyEnforcement:
         with mock.patch(
             "agent_uia.executor.assert_app_allowed"
         ) as mock_assert:
-            executor = UIAExecutor(safety_gate=_dummy_gate())
-            reg = executor._registry  # noqa: SLF001
-            fake_obj = mock.MagicMock()
+            executor, ref, fake_obj = self._make_ref_with_window()
             fake_ip = mock.MagicMock()
             fake_obj.GetInvokePattern.return_value = fake_ip
-            token = reg.register(fake_obj)
-            ref = UIAControlRef(token, reg)
 
             executor.invoke(ref)
             mock_assert.assert_called()
@@ -306,12 +323,11 @@ class TestUIAExecutorWindowOps:
             executor,
             "_iter_top_level_windows",
             return_value=[],
-        ):
-            with pytest.raises(TimeoutError, match="Timed out"):
-                executor.wait_for_window(
-                    title_contains="NonexistentWindow",
-                    timeout=0.5,
-                )
+        ), pytest.raises(TimeoutError, match="Timed out"):
+            executor.wait_for_window(
+                title_contains="NonexistentWindow",
+                timeout=0.5,
+            )
 
     def test_list_windows_empty(self) -> None:
         """list_windows returns empty list when no windows."""
@@ -333,13 +349,12 @@ class TestUIAExecutorWindowOps:
             executor,
             "_find_control_in",
             return_value=None,
-        ):
-            with pytest.raises(TimeoutError, match="Timed out"):
-                executor.wait_for_control(
-                    window,
-                    name_contains="Missing",
-                    timeout=0.5,
-                )
+        ), pytest.raises(TimeoutError, match="Timed out"):
+            executor.wait_for_control(
+                window,
+                name_contains="Missing",
+                timeout=0.5,
+            )
 
 
 class TestUIAWindowInfo:

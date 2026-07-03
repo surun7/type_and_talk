@@ -1,0 +1,37 @@
+id: show-system-info
+name: 显示系统信息
+description: 收集系统 CPU、内存、磁盘使用情况，整理后写到剪贴板。
+version: "0.1.0"
+author: tnt-team
+license: MIT
+tags: [diagnostics, system, clipboard]
+inputs: []
+permissions: [system_info, clipboard_write]
+steps:
+  - kind: tool
+    id: gather
+    name: 收集系统信息
+    tool: system_info
+    args:
+      components: [cpu, memory, disk]
+  - kind: tool
+    id: format
+    name: 用 LLM 整理为可读文本
+    tool: llm_complete
+    args:
+      system: "你是一个系统信息格式化助手。把结构化数据整理成简洁的中文报告，3-5行，适合分享。"
+      prompt: "请把以下系统信息整理为简洁报告：\n\n{{gather}}"
+      max_tokens: 500
+    depends_on: [gather]
+  - kind: tool
+    id: write
+    name: 写剪贴板
+    tool: clipboard_write
+    args:
+      text: "{{format.text}}"
+    depends_on: [format]
+  - kind: complete
+    id: done
+    name: 完成
+    message: 系统信息已复制到剪贴板。直接粘贴到任何地方即可分享。
+    depends_on: [write]

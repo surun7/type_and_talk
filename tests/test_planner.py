@@ -5,20 +5,18 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from decimal import Decimal
 from pathlib import Path
 from unittest import mock
 
 import pytest
 
+from agent_uia.executor import UIAExecutor
 from agent_uia.llm_client import (
+    AssistantMessage,
     LLMConfig,
     LLMResponse,
     LLMUsage,
-    SystemMessage,
-    UserMessage,
-    AssistantMessage,
     ToolCall,
     UsageLedger,
 )
@@ -27,17 +25,13 @@ from agent_uia.planner import (
     PlannerConfig,
     TaskResult,
 )
-from agent_uia.safety import SafetyGate, SafetyConfig
-from agent_uia.executor import UIAExecutor
-
+from agent_uia.safety import SafetyConfig, SafetyGate
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 
 def _dummy_components():
     """Build a Planner with mocked dependencies."""
-    from agent_uia.safety import SafetyGate, SafetyConfig
-    from agent_uia.executor import UIAExecutor
 
     gate = SafetyGate(SafetyConfig())
     executor = UIAExecutor(safety_gate=gate)
@@ -339,8 +333,16 @@ async def _run_planner_with_mock_llm(
     async def _patched_run_loop(**kwargs):
         """Intercepts _run_loop to inject the mock chat."""
         llm = kwargs["llm"]
-        # Patch the client's chat method.
-        llm.chat = mock_chat_fn  # type: ignore[method-assign]
+        original_chat = llm.chat
+
+        async def recording_chat(messages, tools=None):
+            result = await mock_chat_fn(messages, tools=tools)
+            # Record usage so the budget guard sees the cost.
+            if llm._ledger:
+                llm._ledger.record(task_id="", usage=result.usage)
+            return result
+
+        llm.chat = recording_chat  # type: ignore[method-assign]
         return await Planner._run_loop(planner, **kwargs)
 
     with mock.patch.object(planner, "_run_loop", _patched_run_loop):

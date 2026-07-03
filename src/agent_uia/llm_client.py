@@ -13,13 +13,17 @@ import asyncio
 import json
 import threading
 import time
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, AsyncIterator, Literal
+from typing import Any, Literal
 
 from loguru import logger
 from pydantic import BaseModel, Field, SecretStr
+
+from agent_uia.paths import get_logs_dir
+from agent_uia.performance.monitor import default_monitor, MetricType, MetricPoint
 
 __all__ = [
     "LLMConfig",
@@ -334,15 +338,21 @@ class LLMClient:
     Args:
         config: LLM configuration.
         usage_ledger: Optional ``UsageLedger`` for session-level cost tracking.
+        llm_cache: Optional cache for LLM responses (dict-like interface).
+        monitor: Optional monitor instance; defaults to ``default_monitor()``.
     """
 
     def __init__(
         self,
         config: LLMConfig,
         usage_ledger: UsageLedger | None = None,
+        llm_cache: Any | None = None,
+        monitor: Any | None = None,
     ) -> None:
         self._config = config
         self._ledger = usage_ledger
+        self._llm_cache = llm_cache
+        self._monitor = monitor
 
     # -- chat ------------------------------------------------------------------
 
@@ -374,6 +384,33 @@ class LLMClient:
             body["tools"] = tools
             body["tool_choice"] = "auto"
 
+        _monitor = self._monitor or default_monitor()
+
+        # Cache check.
+        cache_key: str | None = None
+        if self._llm_cache is not None:
+            cache_key = json.dumps(
+                {"messages": openai_messages, "tools": tools},
+                sort_keys=True,
+                default=str,
+            )
+            cached = self._llm_cache.get(cache_key)
+            if cached is not None:
+                _monitor.record(MetricPoint(
+                    name="llm_cache_hit",
+                    type=MetricType.COUNTER,
+                    value=1,
+                    tags={"model": self._config.model},
+                ))
+                return cached
+            else:
+                _monitor.record(MetricPoint(
+                    name="llm_cache_miss",
+                    type=MetricType.COUNTER,
+                    value=1,
+                    tags={"model": self._config.model},
+                ))
+
         last_exc: Exception | None = None
         for attempt in range(self._config.max_retries + 1):
             try:
@@ -385,8 +422,13 @@ class LLMClient:
                     timeout=self._config.request_timeout_s,
                     max_retries=0,  # We handle retries ourselves.
                 )
-                response = await client.chat.completions.create(**body)
+                async with _monitor.time_async("llm_call", model=self._config.model):
+                    response = await client.chat.completions.create(**body)
                 result = _openai_response_to_llm(response, model=self._config.model)
+
+                # Cache the response if caching is enabled.
+                if self._llm_cache is not None and cache_key is not None:
+                    self._llm_cache[cache_key] = result
 
                 # Record usage.
                 if self._ledger:
@@ -576,8 +618,8 @@ class UsageLedger:
         summary: Dict with total_tokens, total_cost, task_count.
     """
 
-    def __init__(self, ledger_path: Path = Path("./logs/usage.jsonl")) -> None:
-        self._path = ledger_path
+    def __init__(self, ledger_path: Path | None = None) -> None:
+        self._path = ledger_path or (get_logs_dir() / "usage.jsonl")
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._entries: list[dict[str, Any]] = []
         self._lock = threading.Lock()
@@ -626,3 +668,191 @@ class UsageLedger:
                 "task_count": len(task_ids),
                 "entry_count": len(self._entries),
             }
+
+    # ══════════════════════════════════════════════════════════════════════
+    #  Aggregation helpers (used by UsageTab)
+    # ══════════════════════════════════════════════════════════════════════
+
+    def today_total(self) -> dict[str, Any]:
+        """Return aggregated stats for today.
+
+        Returns:
+            Dict with ``"cost_usd"``, ``"total_tokens"``, ``"task_count"``.
+        """
+        import calendar
+        from datetime import date
+
+        today = date.today()
+        day_start = calendar.timegm(today.timetuple())
+
+        with self._lock:
+            total_cost = Decimal("0")
+            total_tokens = 0
+            task_ids: set[str] = set()
+            for e in self._entries:
+                if e["timestamp"] >= day_start:
+                    total_cost += Decimal(e["estimated_cost_usd"])
+                    total_tokens += e["total_tokens"]
+                    if e["task_id"]:
+                        task_ids.add(e["task_id"])
+            return {
+                "cost_usd": str(total_cost),
+                "total_tokens": total_tokens,
+                "task_count": len(task_ids),
+            }
+
+    def month_total(self) -> dict[str, Any]:
+        """Return aggregated stats for the current calendar month.
+
+        Returns:
+            Dict with ``"cost_usd"``, ``"total_tokens"``, ``"task_count"``.
+        """
+        import calendar
+        from datetime import date
+
+        today = date.today()
+        month_start = calendar.timegm(today.replace(day=1).timetuple())
+
+        with self._lock:
+            total_cost = Decimal("0")
+            total_tokens = 0
+            task_ids: set[str] = set()
+            for e in self._entries:
+                if e["timestamp"] >= month_start:
+                    total_cost += Decimal(e["estimated_cost_usd"])
+                    total_tokens += e["total_tokens"]
+                    if e["task_id"]:
+                        task_ids.add(e["task_id"])
+            return {
+                "cost_usd": str(total_cost),
+                "total_tokens": total_tokens,
+                "task_count": len(task_ids),
+            }
+
+    def daily_series(self, days: int = 30) -> list[dict[str, Any]]:
+        """Return per-day token/cost series for the last N days.
+
+        Args:
+            days: Number of days to include.
+
+        Returns:
+            List of dicts with keys ``"date"`` (``"YYYY-MM-DD"``),
+            ``"total_tokens"``, ``"cost_usd"``, in chronological order.
+        """
+        import calendar
+        from datetime import date, timedelta
+
+        today = date.today()
+        # Build a lookup keyed by day ordinal.
+        day_buckets: dict[int, dict[str, Any]] = {}
+        for i in range(days):
+            d = today - timedelta(days=days - 1 - i)
+            ordinal = d.toordinal()
+            day_buckets[ordinal] = {
+                "date": d.isoformat(),
+                "total_tokens": 0,
+                "cost_usd": Decimal("0"),
+            }
+
+        cutoff = calendar.timegm(
+            (today - timedelta(days=days)).timetuple()
+        )
+
+        with self._lock:
+            for e in self._entries:
+                if e["timestamp"] < cutoff:
+                    continue
+                ts = date.fromtimestamp(e["timestamp"])
+                ordinal = ts.toordinal()
+                if ordinal in day_buckets:
+                    day_buckets[ordinal]["total_tokens"] += e["total_tokens"]
+                    day_buckets[ordinal]["cost_usd"] += Decimal(
+                        e["estimated_cost_usd"]
+                    )
+
+        result = []
+        for ordinal in sorted(day_buckets):
+            bucket = day_buckets[ordinal]
+            result.append({
+                "date": bucket["date"],
+                "total_tokens": bucket["total_tokens"],
+                "cost_usd": str(bucket["cost_usd"]),
+            })
+        return result
+
+    def cost_by_model(self) -> list[dict[str, Any]]:
+        """Return cost and token totals grouped by model.
+
+        Returns:
+            List of dicts with keys ``"model"``, ``"total_tokens"``,
+            ``"cost_usd"``, sorted descending by cost.
+        """
+        buckets: dict[str, dict[str, Any]] = {}
+
+        with self._lock:
+            for e in self._entries:
+                model = e["model"]
+                if model not in buckets:
+                    buckets[model] = {
+                        "model": model,
+                        "total_tokens": 0,
+                        "cost_usd": Decimal("0"),
+                    }
+                buckets[model]["total_tokens"] += e["total_tokens"]
+                buckets[model]["cost_usd"] += Decimal(e["estimated_cost_usd"])
+
+        result = []
+        for b in buckets.values():
+            result.append({
+                "model": b["model"],
+                "total_tokens": b["total_tokens"],
+                "cost_usd": str(b["cost_usd"]),
+            })
+        result.sort(key=lambda x: Decimal(x["cost_usd"]), reverse=True)
+        return result
+
+    def recent_tasks(self, limit: int = 20) -> list[dict[str, Any]]:
+        """Return the most recent unique tasks with aggregated usage.
+
+        Args:
+            limit: Maximum number of tasks to return.
+
+        Returns:
+            List of dicts with keys ``"timestamp"``, ``"task_id"``,
+            ``"model"``, ``"total_tokens"``, ``"cost_usd"``, sorted by
+            timestamp descending (newest first).
+        """
+        # Group entries by task_id, keeping the latest timestamp.
+        tasks: dict[str, dict[str, Any]] = {}
+
+        with self._lock:
+            for e in self._entries:
+                tid = e["task_id"]
+                if not tid:
+                    continue
+                if tid in tasks:
+                    tasks[tid]["total_tokens"] += e["total_tokens"]
+                    tasks[tid]["cost_usd"] += Decimal(e["estimated_cost_usd"])
+                    # Keep the latest timestamp.
+                    if e["timestamp"] > tasks[tid]["timestamp"]:
+                        tasks[tid]["timestamp"] = e["timestamp"]
+                else:
+                    tasks[tid] = {
+                        "timestamp": e["timestamp"],
+                        "task_id": tid,
+                        "model": e["model"],
+                        "total_tokens": e["total_tokens"],
+                        "cost_usd": Decimal(e["estimated_cost_usd"]),
+                    }
+
+        result = []
+        for t in tasks.values():
+            result.append({
+                "timestamp": t["timestamp"],
+                "task_id": t["task_id"],
+                "model": t["model"],
+                "total_tokens": t["total_tokens"],
+                "cost_usd": str(t["cost_usd"]),
+            })
+        result.sort(key=lambda x: x["timestamp"], reverse=True)
+        return result[:limit]

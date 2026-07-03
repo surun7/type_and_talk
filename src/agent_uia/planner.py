@@ -9,17 +9,19 @@ and budget guards.
 
 from __future__ import annotations
 
-import json
 import asyncio
+import json
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Literal
+from typing import Any, Literal
 
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from agent_uia.executor import UIAExecutor
 from agent_uia.llm_client import (
     LLMClient,
     LLMConfig,
@@ -27,18 +29,17 @@ from agent_uia.llm_client import (
     LLMResponse,
     LLMUsage,
     SystemMessage,
-    UserMessage,
-    AssistantMessage,
     ToolMessage,
-    ToolCall,
     UsageLedger,
+    UserMessage,
 )
+from agent_uia.paths import PACKAGE_DIR
+from agent_uia.performance.monitor import default_monitor, MetricType, MetricPoint
+from agent_uia.safety import SafetyGate
 from agent_uia.tools import (
     ALL_TOOL_SPECS,
     ToolDispatcher,
 )
-from agent_uia.safety import SafetyGate
-from agent_uia.executor import UIAExecutor
 
 __all__ = [
     "PlannerConfig",
@@ -74,7 +75,7 @@ class PlannerConfig(BaseModel):
     max_steps: int = 20
     max_cost_usd_per_task: Decimal = Field(default_factory=lambda: Decimal("0.10"))
     system_prompt_file: Path = Field(
-        default=Path("src/agent_uia/prompts/system_prompt.md")
+        default_factory=lambda: PACKAGE_DIR / "prompts" / "system_prompt.md"
     )
     enable_streaming: bool = True
     planner_timeout_s: float = 120.0
@@ -182,11 +183,13 @@ class Planner:
         executor: UIAExecutor,
         safety_gate: SafetyGate,
         usage_ledger: UsageLedger,
+        app_controller: Any | None = None,
     ) -> None:
         self._config = config
         self._executor = executor
         self._safety = safety_gate
         self._ledger = usage_ledger
+        self._app_controller = app_controller
 
     # -- run -------------------------------------------------------------------
 
@@ -224,7 +227,9 @@ class Planner:
         # 4. Build tool dispatcher.
         tool_specs = _build_openai_tool_specs()
         dispatcher = ToolDispatcher(
-            executor=self._executor, safety_gate=self._safety
+            executor=self._executor,
+            safety_gate=self._safety,
+            app_controller=self._app_controller,
         )
 
         # 5. Get starting cost for budget tracking.
@@ -233,33 +238,57 @@ class Planner:
         total_usage = LLMUsage(model=self._config.llm.model)
         blocked = False
 
-        try:
-            result = await asyncio.wait_for(
-                self._run_loop(
-                    llm=llm,
-                    messages=messages,
-                    tool_specs=tool_specs,
-                    dispatcher=dispatcher,
-                    cost_before=cost_before,
-                    total_usage=total_usage,
-                    on_event=on_event,
-                ),
-                timeout=self._config.planner_timeout_s,
-            )
-            return result
-        except asyncio.TimeoutError:
-            logger.warning(f"Planner timed out after {self._config.planner_timeout_s}s")
-            return TaskResult(
-                status="failed",
-                user_facing_message=(
-                    "The task took too long and was stopped. "
-                    "Try breaking it into smaller steps."
-                ),
-                steps_taken=0,
-                total_cost_usd=self._ledger.total_cost() - cost_before,
-                usage=total_usage,
-                transcript=messages,
-            )
+        _monitor = default_monitor()
+        result: TaskResult | None = None
+        async with _monitor.time_async("planner_task_total"):
+            try:
+                result = await asyncio.wait_for(
+                    self._run_loop(
+                        llm=llm,
+                        messages=messages,
+                        tool_specs=tool_specs,
+                        dispatcher=dispatcher,
+                        cost_before=cost_before,
+                        total_usage=total_usage,
+                        on_event=on_event,
+                    ),
+                    timeout=self._config.planner_timeout_s,
+                )
+                return result
+            except TimeoutError:
+                logger.warning(f"Planner timed out after {self._config.planner_timeout_s}s")
+                result = TaskResult(
+                    status="failed",
+                    user_facing_message=(
+                        "The task took too long and was stopped. "
+                        "Try breaking it into smaller steps."
+                    ),
+                    steps_taken=0,
+                    total_cost_usd=self._ledger.total_cost() - cost_before,
+                    usage=total_usage,
+                    transcript=messages,
+                )
+                return result
+            finally:
+                if result is not None:
+                    _monitor.record(MetricPoint(
+                        name="planner_steps_total",
+                        type=MetricType.COUNTER,
+                        value=result.steps_taken,
+                        tags={},
+                    ))
+                    _monitor.record(MetricPoint(
+                        name="planner_cost_usd",
+                        type=MetricType.GAUGE,
+                        value=float(result.total_cost_usd),
+                        tags={},
+                    ))
+                    _monitor.record(MetricPoint(
+                        name="planner_status",
+                        type=MetricType.COUNTER,
+                        value=1,
+                        tags={"status": result.status},
+                    ))
 
     # -- internal loop ---------------------------------------------------------
 
@@ -281,113 +310,115 @@ class Planner:
         for step in range(self._config.max_steps):
             steps_taken = step + 1
 
-            if on_event:
-                await on_event(StepStarted(step_number=steps_taken))
-
-            # Budget guard.
-            cost_so_far = self._ledger.total_cost() - cost_before
-            if cost_so_far >= self._config.max_cost_usd_per_task:
-                logger.warning(
-                    f"Budget exceeded: ${cost_so_far} >= ${self._config.max_cost_usd_per_task}"
-                )
-                return TaskResult(
-                    status="budget_exceeded",
-                    user_facing_message=(
-                        f"Task budget exceeded (${cost_so_far:.4f} of "
-                        f"${self._config.max_cost_usd_per_task} limit). "
-                        "The task was stopped to prevent excessive cost."
-                    ),
-                    steps_taken=steps_taken,
-                    total_cost_usd=cost_so_far,
-                    usage=total_usage,
-                    transcript=messages,
-                )
-
-            # Call LLM.
-            response = await llm.chat(messages, tools=tool_specs)
-            messages.append(response.message)
-            total_usage.prompt_tokens += response.usage.prompt_tokens
-            total_usage.completion_tokens += response.usage.completion_tokens
-            total_usage.total_tokens += response.usage.total_tokens
-            total_usage.estimated_cost_usd += response.usage.estimated_cost_usd
-
-            if on_event:
-                await on_event(LLMCalled(step_number=steps_taken, response=response))
-
-            # No tool calls → final answer.
-            if not response.message.tool_calls:
-                message_text = response.message.content or "Task completed."
+            _step_monitor = default_monitor()
+            async with _step_monitor.time_async("planner_step", step_index=step):
                 if on_event:
-                    await on_event(FinalAnswerReady(message=message_text))
-                cost_final = self._ledger.total_cost() - cost_before
-                return TaskResult(
-                    status="blocked" if blocked else "success",
-                    user_facing_message=message_text,
-                    steps_taken=steps_taken,
-                    total_cost_usd=cost_final,
-                    usage=total_usage,
-                    transcript=messages,
-                )
+                    await on_event(StepStarted(step_number=steps_taken))
 
-            # Dispatch tool calls (one per turn in practice, but handle multiple).
-            for tc in response.message.tool_calls:
+                # Budget guard.
+                cost_so_far = self._ledger.total_cost() - cost_before
+                if cost_so_far >= self._config.max_cost_usd_per_task:
+                    logger.warning(
+                        f"Budget exceeded: ${cost_so_far} >= ${self._config.max_cost_usd_per_task}"
+                    )
+                    return TaskResult(
+                        status="budget_exceeded",
+                        user_facing_message=(
+                            f"Task budget exceeded (${cost_so_far:.4f} of "
+                            f"${self._config.max_cost_usd_per_task} limit). "
+                            "The task was stopped to prevent excessive cost."
+                        ),
+                        steps_taken=steps_taken,
+                        total_cost_usd=cost_so_far,
+                        usage=total_usage,
+                        transcript=messages,
+                    )
+
+                # Call LLM.
+                response = await llm.chat(messages, tools=tool_specs)
+                messages.append(response.message)
+                total_usage.prompt_tokens += response.usage.prompt_tokens
+                total_usage.completion_tokens += response.usage.completion_tokens
+                total_usage.total_tokens += response.usage.total_tokens
+                total_usage.estimated_cost_usd += response.usage.estimated_cost_usd
+
                 if on_event:
-                    await on_event(
-                        ToolCallStarted(
-                            step_number=steps_taken,
-                            tool_name=tc.name,
-                            arguments=tc.arguments,
+                    await on_event(LLMCalled(step_number=steps_taken, response=response))
+
+                # No tool calls → final answer.
+                if not response.message.tool_calls:
+                    message_text = response.message.content or "Task completed."
+                    if on_event:
+                        await on_event(FinalAnswerReady(message=message_text))
+                    cost_final = self._ledger.total_cost() - cost_before
+                    return TaskResult(
+                        status="blocked" if blocked else "success",
+                        user_facing_message=message_text,
+                        steps_taken=steps_taken,
+                        total_cost_usd=cost_final,
+                        usage=total_usage,
+                        transcript=messages,
+                    )
+
+                # Dispatch tool calls (one per turn in practice, but handle multiple).
+                for tc in response.message.tool_calls:
+                    if on_event:
+                        await on_event(
+                            ToolCallStarted(
+                                step_number=steps_taken,
+                                tool_name=tc.name,
+                                arguments=tc.arguments,
+                            )
                         )
-                    )
 
-                # Validate tool name.
-                if tc.name not in dispatcher.known_tools():
-                    result_str = json.dumps(
-                        {"ok": False, "error": f"Unknown tool: {tc.name}"}
-                    )
-                    logger.warning(f"LLM called unknown tool: {tc.name}")
-                else:
-                    # Dispatch through the tool layer (which goes through safety gate).
-                    try:
-                        result_dict = dispatcher.dispatch(tc.name, tc.arguments)
-                        result_str = json.dumps(result_dict, ensure_ascii=False)
-                    except Exception as exc:
-                        logger.exception(f"Tool dispatch failed: {tc.name}")
+                    # Validate tool name.
+                    if tc.name not in dispatcher.known_tools():
                         result_str = json.dumps(
-                            {"ok": False, "error": str(exc)}
+                            {"ok": False, "error": f"Unknown tool: {tc.name}"}
                         )
+                        logger.warning(f"LLM called unknown tool: {tc.name}")
+                    else:
+                        # Dispatch through the tool layer (which goes through safety gate).
+                        try:
+                            result_dict = await dispatcher.dispatch(tc.name, tc.arguments)
+                            result_str = json.dumps(result_dict, ensure_ascii=False)
+                        except Exception as exc:
+                            logger.exception(f"Tool dispatch failed: {tc.name}")
+                            result_str = json.dumps(
+                                {"ok": False, "error": str(exc)}
+                            )
 
-                # Check for BLOCK.
-                if '"BLOCKED"' in result_str or '"BLOCKED:"' in result_str:
-                    blocked = True
-                    # Extract the block reason.
-                    try:
-                        ar = json.loads(result_str)
-                        if ar.get("error", "").startswith("BLOCKED:"):
-                            block_reason = ar["error"]
-                            logger.warning(f"Tool blocked by safety gate: {block_reason}")
-                    except Exception:
-                        pass
+                    # Check for BLOCK.
+                    if '"BLOCKED"' in result_str or '"BLOCKED:"' in result_str:
+                        blocked = True
+                        # Extract the block reason.
+                        try:
+                            ar = json.loads(result_str)
+                            if ar.get("error", "").startswith("BLOCKED:"):
+                                block_reason = ar["error"]
+                                logger.warning(f"Tool blocked by safety gate: {block_reason}")
+                        except Exception:
+                            pass
 
-                # Append tool result.
-                messages.append(
-                    ToolMessage(tool_call_id=tc.id, content=result_str)
-                )
-
-                if on_event:
-                    ok = True
-                    try:
-                        ok = json.loads(result_str).get("ok", False)
-                    except Exception:
-                        pass
-                    await on_event(
-                        ToolCallFinished(
-                            step_number=steps_taken,
-                            tool_name=tc.name,
-                            result=result_str,
-                            ok=ok,
-                        )
+                    # Append tool result.
+                    messages.append(
+                        ToolMessage(tool_call_id=tc.id, content=result_str)
                     )
+
+                    if on_event:
+                        ok = True
+                        try:
+                            ok = json.loads(result_str).get("ok", False)
+                        except Exception:
+                            pass
+                        await on_event(
+                            ToolCallFinished(
+                                step_number=steps_taken,
+                                tool_name=tc.name,
+                                result=result_str,
+                                ok=ok,
+                            )
+                        )
 
         # Max steps exceeded.
         cost_final = self._ledger.total_cost() - cost_before
@@ -430,5 +461,5 @@ class Planner:
 
 
 def _build_openai_tool_specs() -> list[dict[str, Any]]:
-    """Convert all tool spec models to OpenAI function-calling format."""
-    return [spec.to_openai_spec() for spec in ALL_TOOL_SPECS]
+    """Return the pre-computed OpenAI tool specs from the registry."""
+    return list(ALL_TOOL_SPECS)

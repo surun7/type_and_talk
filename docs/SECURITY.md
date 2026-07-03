@@ -121,9 +121,138 @@ If a task exceeds the budget, `tnt run` exits with code 3 and a message like:
 5. **Future (Prompt 3):** ASR transcripts from the input layer must also be
    redacted before being passed to the LLM or logged.
 
+## Caching and Sensitive Data
+
+### LLM Response Cache
+
+The ``LLMResponseCache`` (in ``agent_uia/performance/cache.py``) caches LLM
+chat completions to avoid redundant API calls and reduce latency. Key security
+properties:
+
+1. **In-memory only.** The cache is a Python dictionary — never serialised to
+   disk, never written to a file, never included in logs. When the application
+   exits, all cached data is lost.
+2. **Key derivation.** Cache keys are the hex-encoded SHA-256 hash of the
+   JSON-serialised messages + model name. The original message content cannot
+   be recovered from the key alone. The key itself is never logged or
+   persisted.
+3. **Content never persisted.** The cached ``LLMResponse`` objects exist only
+   in process memory. No TTL expiry triggers a write to disk — expired
+   entries are simply deleted from the dictionary.
+4. **Opt-out.** Users can disable the LLM cache by setting
+   ``cache.llm_enabled = false`` in the config file. This ensures every
+   chat request reaches the API and no responses are reused across calls.
+
+```toml
+[cache]
+llm_enabled = false
+```
+
+### Staleness Trade-off
+
+The default TTL of 300 seconds (5 minutes) balances performance against
+freshness:
+
+- **Shorter TTL** (e.g. 30 s): safer for dynamic conversations where the
+  LLM's answer could change moment-to-moment, but reduces cache hit rate.
+- **Longer TTL** (e.g. 600 s): better performance for repetitive tasks
+  (e.g. polling a UI element every few seconds) but risks serving a stale
+  response.
+
+Choose the TTL that matches your use case. For security-sensitive contexts
+where LLM responses contain PII or credentials, disable the cache entirely.
+
+### Control Tree Cache
+
+The ``ControlTreeCache`` is a short-lived (default 3 s TTL) cache for
+UI Automation control trees. It does **not** store window content, text
+values, or any user data — only structural metadata (control type,
+automation ID, bounding rectangle). This cache is also purely in-memory
+and is invalidated on every user action via ``invalidate_on_action()``.
+
+## Voice Input Privacy
+
+### ASR (Automatic Speech Recognition)
+
+- All speech recognition runs **entirely offline** on your machine via
+  ``faster-whisper`` (CPU-only, no network connection during transcription).
+- Audio buffers are kept **in memory only** — never written to disk.
+  After transcription the buffer is explicitly freed: ``del audio; gc.collect()``.
+- The model weights are downloaded from ``huggingface.co`` (or a configured mirror).
+  **This is the only network access** during voice input. Users can choose
+  an alternative mirror (e.g. ``hf-mirror.com`` for mainland China) in the
+  first-run dialog.
+
+### TTS (Text-to-Speech, opt-in)
+
+- When enabled, TNT sends **only the final answer text** (already generated
+  by the LLM) to Microsoft's Edge TTS endpoint.
+- No audio, UI state, API keys, or personal data is included in the request.
+- TTS is **opt-in** — users who disable it never make any network request for
+  speech synthesis.
+
+### Mic Indicator
+
+- A **red mic indicator** (button color on the floating window) is visible
+  whenever audio recording is active. The indicator cannot be suppressed by
+  the agent — it is a hardwired UI element.
+
+### User Control
+
+- Model download can be deferred or skipped entirely — TNT works in text-only
+  mode without any voice components.
+- Downloaded models can be removed at any time via ``tnt model-delete <size>``.
+
 ## What This Version Does NOT Protect Against
 
 This is an honest statement of limitations:
+
+- **Physical access attacks.** An attacker with physical access to the machine
+  can bypass any software-level safety mechanism.
+
+- **Kernel-level malware.** If the OS or Python interpreter is compromised, the
+  safety gate cannot be trusted.
+
+- **DLL injection / hooking.** The `uiautomation` library calls Windows COM
+  interfaces. A compromised COM proxy could intercept or spoof UIA calls.
+
+- **Social engineering.** The agent executes the user's instructions. If the user
+  is tricked into issuing a destructive command, the safety gate provides a
+  confirmation prompt — but the user may still approve it.
+
+## Confirmation Protocol
+
+Every destructive or sensitive action (delete, send, pay, submit, transfer,
+purchase, close_account, etc.) follows this flow:
+
+```
+LLM emits tool_call(click, delete_button)
+Dispatcher checks: target is sensitive?
+  → looks for preceding confirmation in tool message history
+  → No confirmation found → returns REFUSED error
+LLM receives the REFUSED error
+  → next turn: emits tool_call(request_user_confirmation, delete_button)
+Dispatcher routes to AppController → ConfirmationDialog pops up
+  → User clicks "Yes"
+  → Dispatcher returns "user said yes" to LLM
+LLM re-emits tool_call(click, delete_button)
+  → Dispatcher allows (confirmation is cached)
+  → executor clicks the button
+  → result returned
+```
+
+Key properties:
+
+- **Server-side guard.** The ToolDispatcher refuses sensitive actions *before*
+  they reach the executor. The LLM cannot bypass this check.
+- **Audit trail.** Every confirmation request and response is logged to
+  ``audit.log`` with the user's response (yes/no/stop/timeout).
+- **Time-out.** If the user does not respond within 30 seconds (configurable),
+  the action is refused and logged as "timeout".
+- **Task abort.** The "Stop the whole task" button immediately aborts the
+  current Planner task and returns a failure status.
+
+## What This Version Does NOT Protect Against
 
 - **Physical access attacks.** An attacker with physical access to the machine
   can bypass any software-level safety mechanism.

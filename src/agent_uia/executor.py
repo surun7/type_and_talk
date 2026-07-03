@@ -15,10 +15,15 @@ from typing import Any, Literal
 
 from loguru import logger
 
+from agent_uia.performance.monitor import default_monitor, MetricType, MetricPoint
 from agent_uia.safety import (
     SafetyGate,
     assert_app_allowed,
     default_gate,
+)
+from agent_uia.tools.base import (
+    _UNSAFE_CONTROL_RE,
+    ALLOWED_KEYS,
 )
 
 __all__ = [
@@ -260,6 +265,16 @@ class UIAExecutor:
     def __init__(self, safety_gate: SafetyGate | None = None) -> None:
         self._safety = safety_gate or default_gate()
         self._registry = _UIAHandleRegistry()
+        self._control_tree_cache = None
+
+    @property
+    def control_tree_cache(self):
+        """Optional cache for control trees, invalidated on UI actions."""
+        return self._control_tree_cache
+
+    @control_tree_cache.setter
+    def control_tree_cache(self, value):
+        self._control_tree_cache = value
 
     # -- window discovery ------------------------------------------------------
 
@@ -286,7 +301,6 @@ class UIAExecutor:
         Returns:
             A ``UIAWindowInfo`` or ``None``.
         """
-        import uiautomation as _uia
 
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
@@ -328,6 +342,12 @@ class UIAExecutor:
             info = self._raw_to_window_info(raw)
             if title_contains and title_contains.lower() not in info.title.lower():
                 continue
+            # Apply the same safety gate used by find_window so that blocked
+            # apps and login screens are not enumerated for the LLM.
+            try:
+                self._safety_check_window(info)
+            except Exception:
+                continue
             results.append(info)
         return results
 
@@ -348,11 +368,13 @@ class UIAExecutor:
         Returns:
             The root ``UIAControlNode`` of the tree.
         """
-        self._safety_check_window(window)
-        import uiautomation as _uia
+        _monitor = default_monitor()
+        with _monitor.time("uia_enumerate"):
+            self._safety_check_window(window)
+            import uiautomation as _uia
 
-        raw_ctrl = _uia.ControlFromHandle(window.handle)
-        return self._build_tree(raw_ctrl, depth=0, max_depth=max_depth)
+            raw_ctrl = _uia.ControlFromHandle(window.handle)
+            return self._build_tree(raw_ctrl, depth=0, max_depth=max_depth)
 
     # -- actions ---------------------------------------------------------------
 
@@ -370,23 +392,30 @@ class UIAExecutor:
             button: Mouse button to click.
             double: If ``True``, perform a double-click.
         """
-        self._safety_check_control(control)
-        uia = control._uia  # noqa: SLF001
-        # Focus first, then click.
-        try:
-            uia.SetFocus()
-        except Exception:
-            logger.debug("SetFocus failed for control, attempting click anyway")
-        if double:
+        _monitor = default_monitor()
+        with _monitor.time("uia_action", tool="click"):
+            self._safety_check_control(control)
+            uia = control._uia  # noqa: SLF001
+            # Focus first, then click.
             try:
-                uia.DoubleClick()
+                uia.SetFocus()
             except Exception:
-                _simulated_double_click(uia, button)
-        else:
+                logger.debug("SetFocus failed for control, attempting click anyway")
+            if double:
+                try:
+                    uia.DoubleClick()
+                except Exception:
+                    _simulated_double_click(uia, button)
+            else:
+                try:
+                    uia.Click()
+                except Exception:
+                    _simulated_click(uia, button)
+        if self._control_tree_cache is not None:
             try:
-                uia.Click()
+                self._control_tree_cache.invalidate(control)
             except Exception:
-                _simulated_click(uia, button)
+                pass
 
     def type_text(self, control: UIAControlRef, text: str) -> None:
         """Type text into a control by simulating keystrokes.
@@ -399,15 +428,25 @@ class UIAExecutor:
             control: The target control.
             text: The text to type.
         """
-        self._safety_check_control(control)
-        uia = control._uia  # noqa: SLF001
-        try:
-            uia.SetFocus()
-        except Exception:
-            logger.debug("SetFocus failed before type_text")
-        import uiautomation as _uia
+        _monitor = default_monitor()
+        with _monitor.time("uia_action", tool="type_text"):
+            self._safety_check_control(control)
+            uia = control._uia  # noqa: SLF001
+            try:
+                uia.SetFocus()
+            except Exception:
+                logger.debug("SetFocus failed before type_text")
+            import uiautomation as _uia
 
-        _uia.SendKeys(text, waitTime=0.02)
+            safe_text = _UNSAFE_CONTROL_RE.sub("", text)
+            if safe_text != text:
+                logger.debug("Stripped unsafe control characters from type_text input")
+            _uia.SendKeys(safe_text, waitTime=0.02)
+        if self._control_tree_cache is not None:
+            try:
+                self._control_tree_cache.invalidate(control)
+            except Exception:
+                pass
 
     def invoke(self, control: UIAControlRef) -> None:
         """Invoke a control (Button/InvokePattern).
@@ -415,16 +454,23 @@ class UIAExecutor:
         Args:
             control: The target control (must support InvokePattern).
         """
-        self._safety_check_control(control)
-        uia = control._uia  # noqa: SLF001
-        try:
-            ip = uia.GetInvokePattern()
-            if ip is not None:
-                ip.Invoke()
-            else:
+        _monitor = default_monitor()
+        with _monitor.time("uia_action", tool="invoke"):
+            self._safety_check_control(control)
+            uia = control._uia  # noqa: SLF001
+            try:
+                ip = uia.GetInvokePattern()
+                if ip is not None:
+                    ip.Invoke()
+                else:
+                    uia.Click()
+            except Exception:
                 uia.Click()
-        except Exception:
-            uia.Click()
+        if self._control_tree_cache is not None:
+            try:
+                self._control_tree_cache.invalidate(control)
+            except Exception:
+                pass
 
     def set_value(self, control: UIAControlRef, value: str) -> None:
         """Set the value of an Edit/ValuePattern control.
@@ -436,17 +482,41 @@ class UIAExecutor:
             control: The target control.
             value: The new text value.
         """
-        self._safety_check_control(control)
-        uia = control._uia  # noqa: SLF001
-        try:
-            vp = uia.GetValuePattern()
-            if vp is not None:
-                vp.SetValue(value)
-                return
-        except Exception:
-            logger.debug("ValuePattern.SetValue failed, falling back to type_text")
-        # Fallback
-        self.type_text(control, value)
+        _monitor = default_monitor()
+        with _monitor.time("uia_action", tool="set_value"):
+            self._safety_check_control(control)
+            uia = control._uia  # noqa: SLF001
+
+            # Guard against accidentally dumping huge strings into a control.
+            max_len = 50_000
+            if len(value) > max_len:
+                logger.warning(
+                    "set_value value truncated from %d to %d characters",
+                    len(value),
+                    max_len,
+                )
+                value = value[:max_len]
+
+            try:
+                vp = uia.GetValuePattern()
+                if vp is not None:
+                    vp.SetValue(value)
+                    if self._control_tree_cache is not None:
+                        try:
+                            self._control_tree_cache.invalidate(control)
+                        except Exception:
+                            pass
+                    return True
+            except Exception:
+                logger.debug("ValuePattern.SetValue failed, falling back to type_text")
+            # Fallback
+            self.type_text(control, value)
+        if self._control_tree_cache is not None:
+            try:
+                self._control_tree_cache.invalidate(control)
+            except Exception:
+                pass
+        return True
 
     def press_key(self, key: str) -> None:
         """Send a global key press.
@@ -454,10 +524,20 @@ class UIAExecutor:
         Args:
             key: Key name or combination (e.g. ``"ctrl+a"``, ``"Return"``,
                 ``"Escape"``).
-        """
-        import uiautomation as _uia
 
-        _uia.SendKeys("{" + key + "}", waitTime=0.02)
+        Raises:
+            ValueError: If *key* is not in the allowed key whitelist.
+        """
+        _monitor = default_monitor()
+        with _monitor.time("uia_action", tool="press_key"):
+            if key not in ALLOWED_KEYS:
+                raise ValueError(
+                    f"Key {key!r} is not in the allowed key whitelist."
+                )
+
+            import uiautomation as _uia
+
+            _uia.SendKeys("{" + key + "}", waitTime=0.02)
 
     # -- wait helpers ----------------------------------------------------------
 
@@ -543,24 +623,36 @@ class UIAExecutor:
         Args:
             window: The window to close.
         """
-        self._safety_check_window(window)
-        import uiautomation as _uia
+        _monitor = default_monitor()
+        with _monitor.time("uia_action", tool="close_window"):
+            self._safety_check_window(window)
+            import uiautomation as _uia
 
-        try:
-            raw = _uia.ControlFromHandle(window.handle)
-            wp = raw.GetWindowPattern()
-            if wp is not None:
-                wp.Close()
-                return
-        except Exception:
-            logger.debug("WindowPattern.Close failed, falling back to Alt+F4")
-        # Fallback: focus and send Alt+F4.
-        try:
-            raw = _uia.ControlFromHandle(window.handle)
-            raw.SetFocus()
-        except Exception:
-            pass
-        _uia.SendKeys("{Alt}f4", waitTime=0.1)
+            try:
+                raw = _uia.ControlFromHandle(window.handle)
+                wp = raw.GetWindowPattern()
+                if wp is not None:
+                    wp.Close()
+                    if self._control_tree_cache is not None:
+                        try:
+                            self._control_tree_cache.invalidate(window.handle)
+                        except Exception:
+                            pass
+                    return
+            except Exception:
+                logger.debug("WindowPattern.Close failed, falling back to Alt+F4")
+            # Fallback: focus and send Alt+F4.
+            try:
+                raw = _uia.ControlFromHandle(window.handle)
+                raw.SetFocus()
+            except Exception:
+                pass
+            _uia.SendKeys("{Alt}f4", waitTime=0.1)
+        if self._control_tree_cache is not None:
+            try:
+                self._control_tree_cache.invalidate(window.handle)
+            except Exception:
+                pass
 
     # -- internal helpers ------------------------------------------------------
 
@@ -575,27 +667,35 @@ class UIAExecutor:
     def _safety_check_control(self, control: UIAControlRef) -> None:
         """Run the safety gate against the window owning *control*.
 
-        NOTE: This is a best-effort check.  The control's parent window
-        is looked up via the UIA tree. If resolution fails the action
-        is still allowed — the safety check fires at window-discovery
-        time as well.
+        The control's parent window is looked up via the UIA tree. If the
+        owning window cannot be resolved, the action is denied (fail-closed)
+        rather than allowed.
         """
-        try:
-            uia = control._uia  # noqa: SLF001
-            import uiautomation as _uia
+        uia = control._uia  # noqa: SLF001
+        import uiautomation as _uia
 
-            ancestor = uia
-            for _ in range(16):
+        ancestor = uia
+        for _ in range(16):
+            try:
                 parent = ancestor.GetParentControl()
-                if parent is None:
-                    break
-                ancestor = parent
-            # Try to get window info from the topmost ancestor.
+            except Exception as exc:
+                raise RuntimeError(
+                    "Could not resolve parent window for safety check"
+                ) from exc
+            if parent is None:
+                break
+            ancestor = parent
+
+        # Try to get window info from the topmost ancestor.
+        try:
             raw_win = _uia.ControlFromHandle(ancestor.NativeWindowHandle)
-            win_info = self._raw_to_window_info(raw_win)
-            self._safety_check_window(win_info)
-        except Exception:
-            logger.debug("Could not resolve parent window for safety check")
+        except Exception as exc:
+            raise RuntimeError(
+                "Could not resolve parent window for safety check"
+            ) from exc
+
+        win_info = self._raw_to_window_info(raw_win)
+        self._safety_check_window(win_info)
 
     @staticmethod
     def _raw_to_window_info(raw: Any) -> UIAWindowInfo:

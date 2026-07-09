@@ -1,9 +1,11 @@
 <p align="center">
+  <a href="https://github.com/surun7/type_and_talk/releases/tag/v0.1.0">
+    <img src="https://img.shields.io/github/v/release/surun7/type_and_talk?color=blue&label=Download&logo=windows" alt="Download">
+  </a>
   <img src="https://img.shields.io/badge/platform-Windows%20only-0078D6?logo=windows&logoColor=white" alt="Windows only">
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="Apache 2.0">
   <img src="https://img.shields.io/badge/python-3.11%2B-blue?logo=python&logoColor=white" alt="Python 3.11+">
   <img src="https://img.shields.io/badge/status-🔄%20active%20dev-orange" alt="Active development">
-  <img src="https://img.shields.io/badge/perf-optimized-brightgreen" alt="Performance optimized">
   <img src="https://img.shields.io/badge/voice-Whisper%20ASR%20+%20Edge%20TTS-blueviolet" alt="Voice input">
   <img src="https://img.shields.io/badge/skills-YAML%20based-blue" alt="Skill system">
   <img src="https://img.shields.io/badge/vision-none-darkgreen" alt="No vision">
@@ -51,6 +53,14 @@ menus, and windows. Think of it as a screen-reader that can also *click* and *ty
 ---
 
 ## 🚀 Quick Start
+
+### Option A: Download the executable (no Python needed)
+
+1. Download **[tnt.exe](https://github.com/surun7/type_and_talk/releases/tag/v0.1.0)** from Releases
+2. Put it anywhere, double-click to launch the GUI
+3. Set your `DEEPSEEK_API_KEY` in the Settings tab
+
+### Option B: Run from source
 
 ```bash
 # 1. Clone

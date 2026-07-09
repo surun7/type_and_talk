@@ -31,8 +31,8 @@
 
 **Type and Talk** is a desktop agent that turns natural language and voice into real UI actions:
 
-> *"打开记事本，输入 'Hello from TNT'，不保存关闭。"*
-> *(Press Ctrl+Shift+V and say it.)*
+> *"Open Notepad, type 'Hello from TNT', and close it without saving."*
+> *(Or press Ctrl+Shift+V and say it.)*
 
 It uses the [Windows UI Automation](https://github.com/yinkaisheng/Python-UIAutomation-for-Windows) API
 exclusively — the same accessibility interface used by screen readers. Instead of

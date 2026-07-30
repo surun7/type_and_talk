@@ -136,9 +136,8 @@ class FirstRunDialog(QDialog):
 
         # ── window flags ─────────────────────────────────────────────────
         self.setWindowFlags(
-            Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.Dialog
+            Qt.WindowStaysOnTopHint | Qt.Dialog
         )
-        self.setAttribute(Qt.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.setModal(True)
         self.setFixedSize(520, 420)

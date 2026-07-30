@@ -40,7 +40,7 @@ def _version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
-@app.callback()
+@app.callback(invoke_without_command=True)
 def _main(
     ctx: typer.Context,
     version: bool = typer.Option(
@@ -54,7 +54,9 @@ def _main(
 ) -> None:
     # No subcommand → start GUI (default for end users).
     if ctx.invoked_subcommand is None:
+        print("DEBUG: starting GUI...", file=sys.stderr)
         _run_gui()
+        print("DEBUG: GUI returned unexpectedly", file=sys.stderr)
 
 
 @app.command()
@@ -235,11 +237,20 @@ def doctor() -> None:
 
 def _run_gui() -> None:
     """Start the TNT desktop GUI (system tray, floating window, hotkey)."""
-    from agent_uia.ui import AppConfig, AppController
+    try:
+        from agent_uia.ui import AppConfig, AppController
 
-    # Allow offscreen override for testing.
-    controller = AppController(config=AppConfig())
-    controller.start()
+        # Allow offscreen override for testing.
+        controller = AppController(config=AppConfig())
+        controller.start()
+    except Exception as exc:
+        import traceback
+        import sys
+        print("FATAL: GUI failed to start", file=sys.stderr)
+        traceback.print_exc()
+        print(f"\nError: {exc}", file=sys.stderr)
+        input("\nPress Enter to exit...")
+        sys.exit(1)
 
 
 @app.command()

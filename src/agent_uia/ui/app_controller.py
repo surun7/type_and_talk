@@ -504,6 +504,9 @@ class AppController(QObject):
         # 7. Show tray.
         self._tray.show()
 
+        # 7b. Show main window on startup.
+        self.show_main_window()
+
         # 8. Start background perf flush loop.
         if self._config.enable_perf_monitoring and self._loop is not None:
             self._perf_flush_task = asyncio.ensure_future(
@@ -511,7 +514,16 @@ class AppController(QObject):
                 loop=self._loop,
             )
 
-        # 9. Enter event loop (blocking).
+        # 9. Install Ctrl+C handler to gracefully quit GUI mode.
+        import signal as _signal
+
+        def _sigint_handler(*_args: object) -> None:
+            logger.info("SIGINT received, shutting down GUI...")
+            self.quit()
+
+        _signal.signal(_signal.SIGINT, _sigint_handler)
+
+        # 10. Enter event loop (blocking).
         logger.info("TNT GUI started.")
         self._loop.run_forever()
         logger.info("TNT GUI stopped.")
